@@ -20,7 +20,7 @@ const ISAPRES = [
 ];
 
 export default function RegistroAdminForm({ token, onComplete }) {
-  const [rut,           setRut]           = useState("");
+  const [rutInput,      setRutInput]      = useState("");
   const [mode,          setMode]          = useState("search"); // search | edit | create
   const [isEditing,     setIsEditing]     = useState(false);
   const [loading,       setLoading]       = useState(false);
@@ -43,7 +43,7 @@ export default function RegistroAdminForm({ token, onComplete }) {
   // ── Buscar por RUT ───────────────────────────────────────
   async function handleSearch() {
     setError(null);
-    const norm = normalizeRut(rut);
+    const norm = normalizeRut(rutInput);
     if (!isValidRut(norm)) { setError("RUT inválido"); return; }
 
     setLoading(true);
@@ -166,10 +166,10 @@ export default function RegistroAdminForm({ token, onComplete }) {
         <div className="dp-header-left">
           <h1>Sus datos personales</h1>
           <p>
-            {mode === "search"  && "Ingrese su RUT para continuar"}
-            {mode === "create"  && "Complete sus datos"}
-            {mode === "edit" && ro  && "Verifique sus datos"}
-            {mode === "edit" && !ro && "Editando sus datos"}
+            {mode === "search"       && "Ingrese su RUT para continuar"}
+            {mode === "create"       && "Complete sus datos"}
+            {mode === "edit" && ro   && "Verifique sus datos"}
+            {mode === "edit" && !ro  && "Editando sus datos"}
           </p>
         </div>
       </div>
@@ -177,20 +177,17 @@ export default function RegistroAdminForm({ token, onComplete }) {
       <div className="dp-content">
         <div className="dp-card">
 
-          {/* Búsqueda RUT */}
+          {/* Campo RUT + botón buscar */}
           <div className="dp-search">
             <input
-              placeholder="Ingrese su RUT"
-              value={rut}
-              onChange={e => setRut(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && mode === "search" && handleSearch()}
-              disabled={mode !== "search"}
+              placeholder="RUT"
+              value={rutInput}
+              onChange={e => setRutInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
             />
-            {mode === "search" && (
-              <button onClick={handleSearch} disabled={loading}>
-                {loading ? "…" : "Buscar"}
-              </button>
-            )}
+            <button onClick={handleSearch} disabled={loading}>
+              {loading ? "…" : "🔍"}
+            </button>
           </div>
 
           {error   && <div className="dp-error"   style={{ marginBottom: 12 }}>{error}</div>}
@@ -314,4 +311,4 @@ export default function RegistroAdminForm({ token, onComplete }) {
       </div>
     </div>
   );
-}
+                  }
