@@ -1,11 +1,10 @@
-/* =====================================================
-   dashboard-pacientes.css — Registro Nacional Prótesis
-   Estilo ICA · DM Sans · Boutique clínico
-===================================================== */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: 'DM Sans', system-ui, sans-serif;
@@ -25,33 +24,29 @@ body {
 
 /* ── HEADER ── */
 .dp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
+  padding: 20px 20px 16px;
   background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .dp-header-left h1 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: #0f172a;
-  margin: 0;
+  letter-spacing: -0.3px;
 }
 
 .dp-header-left p {
   font-size: 13px;
   color: #64748b;
-  margin: 2px 0 0;
+  margin-top: 3px;
 }
 
 /* ── CONTENT ── */
 .dp-content {
   flex: 1;
-  padding: 20px;
-  max-width: 560px;
+  padding: 16px 16px 32px;
+  max-width: 540px;
   width: 100%;
   margin: 0 auto;
 }
@@ -59,10 +54,11 @@ body {
 /* ── CARD ── */
 .dp-card {
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e8edf2;
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 20px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 /* ── FIELDS ── */
@@ -71,74 +67,79 @@ body {
 }
 
 .dp-field-label {
+  display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #475569;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 5px;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
 }
 
 .dp-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 11px 13px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
   font-family: 'DM Sans', system-ui, sans-serif;
-  outline: none;
   color: #0f172a;
   background: #fff;
-  transition: border-color 0.15s;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: auto;
 }
 
 .dp-input:focus {
-  border-color: #94a3b8;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15,23,42,0.06);
 }
 
 .dp-input:read-only,
 .dp-input:disabled {
   background: #f8fafc;
-  color: #64748b;
+  color: #94a3b8;
+  border-color: #f1f5f9;
   cursor: default;
 }
 
 /* ── BOTONES ── */
 .dp-btn-primary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   background: #0f172a;
   color: #fff;
   border: none;
-  border-radius: 10px;
-  padding: 11px 20px;
-  font-size: 14px;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 15px;
   font-weight: 700;
   font-family: 'DM Sans', system-ui, sans-serif;
   cursor: pointer;
   transition: opacity 0.15s;
-  width: 100%;
+  letter-spacing: -0.1px;
 }
 
-.dp-btn-primary:hover   { opacity: 0.88; }
-.dp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.dp-btn-primary:hover    { opacity: 0.85; }
+.dp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .dp-btn-secondary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   background: #fff;
   color: #0f172a;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-size: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 15px;
   font-weight: 600;
   font-family: 'DM Sans', system-ui, sans-serif;
   cursor: pointer;
   transition: background 0.15s;
-  width: 100%;
 }
 
 .dp-btn-secondary:hover { background: #f8fafc; }
@@ -148,91 +149,99 @@ body {
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #dc2626;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: 10px;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .dp-success {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   color: #16a34a;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: 10px;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .dp-loading {
   font-size: 14px;
-  color: #64748b;
+  color: #94a3b8;
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
 }
 
 .dp-empty {
   font-size: 13px;
   color: #94a3b8;
   text-align: center;
-  padding: 24px;
 }
 
-/* ── SECCIÓN ── */
-.dp-section {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 14px;
-}
-
-.dp-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 12px;
-}
-
-/* ── BADGE ── */
-.dp-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #f1f5f9;
-  color: #475569;
-}
-
-/* ── EVENT ROW ── */
-.dp-event-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.dp-event-row:last-child { border-bottom: none; }
-
-.dp-event-diag {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 2px;
-}
-
-.dp-event-meta {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0;
-}
-
-/* ── HINT ── */
 .dp-hint {
+  display: block;
   font-size: 11px;
   color: #94a3b8;
   margin-top: 4px;
 }
+
+/* ── SECCIÓN ── */
+.dp-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+/* ── ROW ── */
+.dp-row {
+  display: flex;
+  gap: 10px;
+}
+
+.dp-row .dp-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── SEARCH — campo RUT igual que ICA ── */
+.dp-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dp-search-row input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dp-search-row input:focus {
+  border-color: #0f172a;
+}
+
+.dp-search-row button {
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.dp-search-row button:hover    { opacity: 0.85; }
+.dp-search-row button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── PROGRESS ── */
 .dp-progress-bar {
@@ -240,7 +249,6 @@ body {
   background: #e2e8f0;
   border-radius: 99px;
   overflow: hidden;
-  margin: 6px 0;
 }
 
 .dp-progress-fill {
@@ -250,13 +258,9 @@ body {
   transition: width 0.3s ease;
 }
 
-/* ── GRID ── */
-.dp-row {
-  display: flex;
-  gap: 10px;
-}
-
-.dp-row .dp-field { flex: 1; }
+/* ── EVENT ── */
+.dp-event-diag { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 3px; }
+.dp-event-meta { font-size: 12px; color: #64748b; margin: 0; }
 
 /* ── ACCIÓN PENDIENTE ── */
 .dp-accion-pendiente {
@@ -288,6 +292,17 @@ body {
   flex-shrink: 0;
 }
 
+/* ── BADGE ── */
+.dp-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+}
+
 /* ── FOOTER ── */
 .dp-footer {
   text-align: center;
@@ -296,4 +311,4 @@ body {
   color: #94a3b8;
   border-top: 1px solid #e2e8f0;
   background: #fff;
-}
+   }
