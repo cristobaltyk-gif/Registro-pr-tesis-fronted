@@ -19,16 +19,17 @@ const ISAPRES = [
   "Vida Tres", "Otra",
 ];
 
-export default function RegistroAdminForm({ token, onComplete }) {
-  const [rut,          setRut]          = useState("");
-  const [mode,         setMode]         = useState("search"); // search | edit | create
-  const [isEditing,    setIsEditing]    = useState(false);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState(null);
-  const [success,      setSuccess]      = useState(null);
+export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onComplete }) {
+  const [rutInput,      setRutInput]      = useState("");
+  const [token,         setToken]         = useState(tokenProp || null);
+  const [mode,          setMode]          = useState("search");
+  const [isEditing,     setIsEditing]     = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+  const [success,       setSuccess]       = useState(null);
   const [previsionTipo, setPrevisionTipo] = useState("");
-  const [isapre,       setIsapre]       = useState("");
-  const [otraIsapre,   setOtraIsapre]   = useState("");
+  const [isapre,        setIsapre]        = useState("");
+  const [otraIsapre,    setOtraIsapre]    = useState("");
 
   const [form, setForm] = useState({
     rut: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
@@ -40,79 +41,60 @@ export default function RegistroAdminForm({ token, onComplete }) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  // ── Buscar paciente ──────────────────────────────────────
+  // ── Buscar: genera token + busca datos ──────────────────
   async function handleSearch() {
     setError(null);
-    if (!rut || !isValidRut(normalizeRut(rut))) { setError("RUT inválido"); return; }
-    const norm = normalizeRut(rut);
+    const norm = normalizeRut(rutInput);
+    if (!isValidRut(norm)) { setError("RUT inválido"); return; }
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/registro/admin/${encodeURIComponent(norm)}`, {
-        headers: { "Authorization": `Bearer ${token}` }
+      // 1. Generar token JWT con el RUT
+      const authRes = await fetch(`${API_URL}/api/registro/auth/ingresar`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ rut: norm }),
       });
+      if (!authRes.ok) throw new Error("Error al autenticar");
+      const authData = await authRes.json();
+      const t = authData.token;
+      setToken(t);
+      onTokenReady?.(t);
+
+      // 2. Buscar datos del paciente
+      const res = await fetch(`${API_URL}/api/registro/admin/${encodeURIComponent(norm)}`, {
+        headers: { "Authorization": `Bearer ${t}` }
+      });
+
       if (res.ok) {
         const data = await res.json();
         setForm({
-          rut:             data.rut              ?? norm,
-          nombre:          data.nombre           ?? "",
-          apellidoPaterno: data.apellido_paterno ?? "",
-          apellidoMaterno: data.apellido_materno ?? "",
-          fechaNacimiento: data.fecha_nacimiento ?? "",
-          direccion:       data.direccion        ?? "",
-          telefono:        data.telefono         ?? "",
-          email:           data.email            ?? "",
-          sexo:            data.sexo             ?? "",
+          rut:             data.rut              || norm,
+          nombre:          data.nombre           || "",
+          apellidoPaterno: data.apellido_paterno || "",
+          apellidoMaterno: data.apellido_materno || "",
+          fechaNacimiento: data.fecha_nacimiento || "",
+          direccion:       data.direccion        || "",
+          telefono:        data.telefono         || "",
+          email:           data.email            || "",
+          sexo:            data.sexo             || "",
         });
         const prev = data.prevision || "";
-        if (prev.startsWith("Isapre")) {
-          setPrevisionTipo("Isapre");
-          setIsapre(prev.replace("Isapre - ", ""));
-        } else {
-          setPrevisionTipo(prev);
-        }
+        if (prev.startsWith("Isapre")) { setPrevisionTipo("Isapre"); setIsapre(prev.replace("Isapre - ", "")); }
+        else { setPrevisionTipo(prev); }
         setMode("edit"); setIsEditing(false);
         return;
       }
+
       if (res.status === 404) {
         setForm({ rut: norm, nombre: "", apellidoPaterno: "", apellidoMaterno: "", fechaNacimiento: "", direccion: "", telefono: "", email: "", sexo: "" });
         setPrevisionTipo(""); setIsapre("");
         setMode("create"); setIsEditing(true);
         return;
       }
-      setError("Error inesperado al buscar");
-    } catch { setError("Error de conexión con el servidor"); }
-    finally  { setLoading(false); }
-  }
 
-  // ── Confirmar paciente existente ─────────────────────────
-  function handleConfirmExisting() {
-    onComplete?.(buildPayload());
-  }
-
-  // ── Guardar / modificar ──────────────────────────────────
-  async function handleSubmit() {
-    setError(null);
-    if (!form.nombre || !form.apellidoPaterno) { setError("Nombre y apellido paterno son obligatorios"); return; }
-    if (!form.fechaNacimiento)                 { setError("Fecha de nacimiento obligatoria"); return; }
-    if (!form.sexo)                            { setError("Sexo es obligatorio"); return; }
-    if (!form.email)                           { setError("Email es obligatorio"); return; }
-
-    const payload = buildPayload();
-    setLoading(true);
-    try {
-      const res = await fetch(
-        mode === "create" ? `${API_URL}/api/registro/admin` : `${API_URL}/api/registro/admin/${encodeURIComponent(form.rut)}`,
-        {
-          method:  mode === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body:    JSON.stringify(payload),
-        }
-      );
-      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error al guardar"); }
-      setSuccess("Datos guardados");
-      setIsEditing(false); setMode("edit");
-      setTimeout(() => { setSuccess(null); onComplete?.(payload); }, 1200);
-    } catch (e) { setError(e.message); }
+      setError("Error al buscar. Intente nuevamente.");
+    } catch (e) { setError(e.message || "Error de conexión."); }
     finally     { setLoading(false); }
   }
 
@@ -126,17 +108,44 @@ export default function RegistroAdminForm({ token, onComplete }) {
 
   function buildPayload() {
     return {
-      rut:              form.rut,
-      nombre:           form.nombre,
-      apellido_paterno: form.apellidoPaterno,
-      apellido_materno: form.apellidoMaterno,
+      rut: form.rut, nombre: form.nombre.trim(),
+      apellido_paterno: form.apellidoPaterno.trim(),
+      apellido_materno: form.apellidoMaterno.trim(),
       fecha_nacimiento: form.fechaNacimiento,
-      direccion:        form.direccion,
-      telefono:         form.telefono,
-      email:            form.email,
-      prevision:        getPrevisionFinal(),
-      sexo:             form.sexo,
+      direccion: form.direccion.trim(), telefono: form.telefono.trim(),
+      email: form.email.trim(), prevision: getPrevisionFinal(), sexo: form.sexo,
     };
+  }
+
+  function validate() {
+    if (!form.nombre)          { setError("Nombre es obligatorio");                   return false; }
+    if (!form.apellidoPaterno) { setError("Apellido paterno es obligatorio");          return false; }
+    if (!form.fechaNacimiento) { setError("Fecha de nacimiento es obligatoria");       return false; }
+    if (!form.sexo)            { setError("Sexo es obligatorio");                      return false; }
+    if (!form.email)           { setError("Email es obligatorio para notificaciones"); return false; }
+    return true;
+  }
+
+  async function handleSubmit() {
+    setError(null);
+    if (!validate()) return;
+    const payload = buildPayload();
+    setLoading(true);
+    try {
+      const res = await fetch(
+        mode === "create" ? `${API_URL}/api/registro/admin` : `${API_URL}/api/registro/admin/${encodeURIComponent(form.rut)}`,
+        {
+          method:  mode === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body:    JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error guardando"); }
+      setSuccess("Datos guardados");
+      setIsEditing(false); setMode("edit");
+      setTimeout(() => { setSuccess(null); onComplete?.(payload); }, 1200);
+    } catch (e) { setError(e.message); }
+    finally     { setLoading(false); }
   }
 
   const ro = mode === "edit" && !isEditing;
@@ -148,9 +157,9 @@ export default function RegistroAdminForm({ token, onComplete }) {
           <h1>Sus datos personales</h1>
           <p>
             {mode === "search"      && "Ingrese su RUT para continuar"}
-            {mode === "create"      && "Nuevo paciente"}
-            {mode === "edit" && ro  && "Paciente encontrado"}
-            {mode === "edit" && !ro && "Editando paciente"}
+            {mode === "create"      && "Nuevo registro — complete sus datos"}
+            {mode === "edit" && ro  && "Paciente encontrado — verifique sus datos"}
+            {mode === "edit" && !ro && "Editando sus datos"}
           </p>
         </div>
       </div>
@@ -158,47 +167,48 @@ export default function RegistroAdminForm({ token, onComplete }) {
       <div className="dp-content">
         <div className="dp-card">
 
-          {/* SEARCH */}
+          {/* RUT + Buscar */}
           <div className="registro-search">
             <input
               placeholder="RUT"
-              value={rut}
-              onChange={e => setRut(e.target.value)}
+              value={rutInput}
+              onChange={e => setRutInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
             />
-            <button className="search-btn" disabled={loading} onClick={handleSearch}>
-              🔍
+            <button className="search-btn" onClick={handleSearch} disabled={loading}>
+              {loading ? "…" : "🔍"}
             </button>
           </div>
 
-          {error   && <div className="registro-error">{error}</div>}
-          {success && <div className="registro-success">{success}</div>}
+          {error   && <div className="registro-error"   style={{ marginBottom: 12 }}>{error}</div>}
+          {success && <div className="registro-success" style={{ marginBottom: 12 }}>{success}</div>}
 
           {(mode === "edit" || mode === "create") && (
             <div className="registro-form">
-              <h3>{mode === "edit" ? (isEditing ? "Editando paciente" : "Paciente encontrado") : "Nuevo paciente"}</h3>
 
-              <input placeholder="Nombre" value={form.nombre} readOnly={ro}
+              <h3>{mode === "create" ? "Nuevo paciente" : isEditing ? "Editando" : "Paciente encontrado"}</h3>
+
+              <input placeholder="Nombre *" value={form.nombre} readOnly={ro}
                 onChange={e => update("nombre", e.target.value)} />
 
               <div className="registro-row">
-                <input placeholder="Apellido paterno" value={form.apellidoPaterno} readOnly={ro}
+                <input placeholder="Apellido paterno *" value={form.apellidoPaterno} readOnly={ro}
                   onChange={e => update("apellidoPaterno", e.target.value)} />
                 <input placeholder="Apellido materno" value={form.apellidoMaterno} readOnly={ro}
                   onChange={e => update("apellidoMaterno", e.target.value)} />
               </div>
 
               <div className="registro-row">
-                <input type="date" placeholder="Fecha nacimiento" value={form.fechaNacimiento} readOnly={ro}
+                <input type="date" value={form.fechaNacimiento} readOnly={ro}
                   onChange={e => update("fechaNacimiento", e.target.value)} />
-                <select value={form.sexo} disabled={ro} onChange={e => update("sexo", e.target.value)}>
-                  <option value="">Sexo</option>
+                <select value={form.sexo} disabled={ro}
+                  onChange={e => update("sexo", e.target.value)}>
+                  <option value="">Sexo *</option>
                   <option value="MASCULINO">Masculino</option>
                   <option value="FEMENINO">Femenino</option>
                 </select>
               </div>
 
-              {/* Previsión */}
               <select value={previsionTipo} disabled={ro}
                 onChange={e => { setPrevisionTipo(e.target.value); setIsapre(""); }}>
                 <option value="">Previsión</option>
@@ -208,11 +218,11 @@ export default function RegistroAdminForm({ token, onComplete }) {
                 <option value="Otra">Otra</option>
               </select>
 
-              {/* Selector isapre — siempre visible cuando prevision es Isapre */}
               {previsionTipo === "Isapre" && (
                 <>
-                  <select value={isapre} disabled={ro} onChange={e => setIsapre(e.target.value)}>
-                    <option value="">¿Cuál Isapre?</option>
+                  <select value={isapre} disabled={ro}
+                    onChange={e => setIsapre(e.target.value)}>
+                    <option value="">¿Cuál Isapre? *</option>
                     {ISAPRES.map(i => <option key={i} value={i}>{i}</option>)}
                   </select>
                   {isapre === "Otra" && (
@@ -222,27 +232,27 @@ export default function RegistroAdminForm({ token, onComplete }) {
                 </>
               )}
 
-              <input placeholder="Dirección" value={form.direccion} readOnly={ro}
-                onChange={e => update("direccion", e.target.value)} />
-
-              <input placeholder="Teléfono" value={form.telefono} readOnly={ro}
-                onChange={e => update("telefono", e.target.value)} />
-
-              <input type="email" placeholder="Email" value={form.email} readOnly={ro}
+              <input type="email" placeholder="Email *" value={form.email} readOnly={ro}
                 onChange={e => update("email", e.target.value)} />
               {!ro && <span className="registro-hint">Le enviaremos recordatorios de sus evaluaciones</span>}
 
+              <input type="tel" placeholder="Teléfono" value={form.telefono} readOnly={ro}
+                onChange={e => update("telefono", e.target.value)} />
+
+              <input placeholder="Dirección" value={form.direccion} readOnly={ro}
+                onChange={e => update("direccion", e.target.value)} />
+
               <div className="registro-actions">
-                {mode === "edit" && !isEditing && (
+                {ro ? (
                   <>
-                    <button className="btn-primary" onClick={handleConfirmExisting}>Confirmar</button>
-                    <button className="btn-danger"  onClick={() => setIsEditing(true)}>Modificar</button>
+                    <button className="btn-primary"  onClick={() => onComplete?.(buildPayload())}>Confirmar →</button>
+                    <button className="btn-danger"   onClick={() => setIsEditing(true)}>Modificar</button>
                   </>
-                )}
-                {(mode === "create" || isEditing) && (
+                ) : (
                   <>
-                    <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-                      {loading ? "Guardando…" : mode === "edit" ? "Guardar cambios" : "Guardar"}
+                    <button className="btn-primary" onClick={handleSubmit} disabled={loading}
+                      style={{ opacity: loading ? 0.6 : 1 }}>
+                      {loading ? "Guardando…" : mode === "create" ? "Guardar y continuar →" : "Guardar cambios →"}
                     </button>
                     {mode === "edit" && (
                       <button className="btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
@@ -258,4 +268,4 @@ export default function RegistroAdminForm({ token, onComplete }) {
       </div>
     </div>
   );
-}
+              }
