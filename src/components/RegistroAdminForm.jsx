@@ -20,15 +20,15 @@ const ISAPRES = [
 ];
 
 export default function RegistroAdminForm({ token, onComplete }) {
-  const [rutInput,      setRutInput]      = useState("");
-  const [mode,          setMode]          = useState("search");
-  const [isEditing,     setIsEditing]     = useState(false);
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState(null);
-  const [success,       setSuccess]       = useState(null);
+  const [rut,          setRut]          = useState("");
+  const [mode,         setMode]         = useState("search"); // search | edit | create
+  const [isEditing,    setIsEditing]    = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState(null);
+  const [success,      setSuccess]      = useState(null);
   const [previsionTipo, setPrevisionTipo] = useState("");
-  const [isapre,        setIsapre]        = useState("");
-  const [otraIsapre,    setOtraIsapre]    = useState("");
+  const [isapre,       setIsapre]       = useState("");
+  const [otraIsapre,   setOtraIsapre]   = useState("");
 
   const [form, setForm] = useState({
     rut: "", nombre: "", apellidoPaterno: "", apellidoMaterno: "",
@@ -40,10 +40,11 @@ export default function RegistroAdminForm({ token, onComplete }) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
+  // ── Buscar paciente ──────────────────────────────────────
   async function handleSearch() {
     setError(null);
-    const norm = normalizeRut(rutInput);
-    if (!isValidRut(norm)) { setError("RUT inválido"); return; }
+    if (!rut || !isValidRut(normalizeRut(rut))) { setError("RUT inválido"); return; }
+    const norm = normalizeRut(rut);
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/registro/admin/${encodeURIComponent(norm)}`, {
@@ -52,19 +53,23 @@ export default function RegistroAdminForm({ token, onComplete }) {
       if (res.ok) {
         const data = await res.json();
         setForm({
-          rut:             data.rut              || norm,
-          nombre:          data.nombre           || "",
-          apellidoPaterno: data.apellido_paterno || "",
-          apellidoMaterno: data.apellido_materno || "",
-          fechaNacimiento: data.fecha_nacimiento || "",
-          direccion:       data.direccion        || "",
-          telefono:        data.telefono         || "",
-          email:           data.email            || "",
-          sexo:            data.sexo             || "",
+          rut:             data.rut              ?? norm,
+          nombre:          data.nombre           ?? "",
+          apellidoPaterno: data.apellido_paterno ?? "",
+          apellidoMaterno: data.apellido_materno ?? "",
+          fechaNacimiento: data.fecha_nacimiento ?? "",
+          direccion:       data.direccion        ?? "",
+          telefono:        data.telefono         ?? "",
+          email:           data.email            ?? "",
+          sexo:            data.sexo             ?? "",
         });
         const prev = data.prevision || "";
-        if (prev.startsWith("Isapre")) { setPrevisionTipo("Isapre"); setIsapre(prev.replace("Isapre - ", "")); }
-        else { setPrevisionTipo(prev); }
+        if (prev.startsWith("Isapre")) {
+          setPrevisionTipo("Isapre");
+          setIsapre(prev.replace("Isapre - ", ""));
+        } else {
+          setPrevisionTipo(prev);
+        }
         setMode("edit"); setIsEditing(false);
         return;
       }
@@ -74,9 +79,41 @@ export default function RegistroAdminForm({ token, onComplete }) {
         setMode("create"); setIsEditing(true);
         return;
       }
-      setError("Error al buscar. Intente nuevamente.");
-    } catch { setError("Error de conexión."); }
+      setError("Error inesperado al buscar");
+    } catch { setError("Error de conexión con el servidor"); }
     finally  { setLoading(false); }
+  }
+
+  // ── Confirmar paciente existente ─────────────────────────
+  function handleConfirmExisting() {
+    onComplete?.(buildPayload());
+  }
+
+  // ── Guardar / modificar ──────────────────────────────────
+  async function handleSubmit() {
+    setError(null);
+    if (!form.nombre || !form.apellidoPaterno) { setError("Nombre y apellido paterno son obligatorios"); return; }
+    if (!form.fechaNacimiento)                 { setError("Fecha de nacimiento obligatoria"); return; }
+    if (!form.sexo)                            { setError("Sexo es obligatorio"); return; }
+    if (!form.email)                           { setError("Email es obligatorio"); return; }
+
+    const payload = buildPayload();
+    setLoading(true);
+    try {
+      const res = await fetch(
+        mode === "create" ? `${API_URL}/api/registro/admin` : `${API_URL}/api/registro/admin/${encodeURIComponent(form.rut)}`,
+        {
+          method:  mode === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body:    JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error al guardar"); }
+      setSuccess("Datos guardados");
+      setIsEditing(false); setMode("edit");
+      setTimeout(() => { setSuccess(null); onComplete?.(payload); }, 1200);
+    } catch (e) { setError(e.message); }
+    finally     { setLoading(false); }
   }
 
   function getPrevisionFinal() {
@@ -89,55 +126,31 @@ export default function RegistroAdminForm({ token, onComplete }) {
 
   function buildPayload() {
     return {
-      rut: form.rut, nombre: form.nombre.trim(),
-      apellido_paterno: form.apellidoPaterno.trim(),
-      apellido_materno: form.apellidoMaterno.trim(),
+      rut:              form.rut,
+      nombre:           form.nombre,
+      apellido_paterno: form.apellidoPaterno,
+      apellido_materno: form.apellidoMaterno,
       fecha_nacimiento: form.fechaNacimiento,
-      direccion: form.direccion.trim(), telefono: form.telefono.trim(),
-      email: form.email.trim(), prevision: getPrevisionFinal(), sexo: form.sexo,
+      direccion:        form.direccion,
+      telefono:         form.telefono,
+      email:            form.email,
+      prevision:        getPrevisionFinal(),
+      sexo:             form.sexo,
     };
-  }
-
-  function validate() {
-    if (!form.nombre)          { setError("Nombre es obligatorio");                   return false; }
-    if (!form.apellidoPaterno) { setError("Apellido paterno es obligatorio");          return false; }
-    if (!form.fechaNacimiento) { setError("Fecha de nacimiento es obligatoria");       return false; }
-    if (!form.sexo)            { setError("Sexo es obligatorio");                      return false; }
-    if (!form.email)           { setError("Email es obligatorio para notificaciones"); return false; }
-    return true;
-  }
-
-  async function handleSubmit() {
-    setError(null);
-    if (!validate()) return;
-    const payload = buildPayload();
-    setLoading(true);
-    try {
-      const res = await fetch(
-        mode === "create" ? `${API_URL}/api/registro/admin` : `${API_URL}/api/registro/admin/${encodeURIComponent(form.rut)}`,
-        { method: mode === "create" ? "POST" : "PUT", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload) }
-      );
-      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error guardando"); }
-      setSuccess("Datos guardados");
-      setIsEditing(false); setMode("edit");
-      setTimeout(() => { setSuccess(null); onComplete?.(payload); }, 1200);
-    } catch (e) { setError(e.message); }
-    finally     { setLoading(false); }
   }
 
   const ro = mode === "edit" && !isEditing;
 
   return (
     <div className="dp-root">
-
       <div className="dp-header">
         <div className="dp-header-left">
           <h1>Sus datos personales</h1>
           <p>
             {mode === "search"      && "Ingrese su RUT para continuar"}
-            {mode === "create"      && "Nuevo registro — complete sus datos"}
-            {mode === "edit" && ro  && "Paciente encontrado — verifique sus datos"}
-            {mode === "edit" && !ro && "Editando sus datos"}
+            {mode === "create"      && "Nuevo paciente"}
+            {mode === "edit" && ro  && "Paciente encontrado"}
+            {mode === "edit" && !ro && "Editando paciente"}
           </p>
         </div>
       </div>
@@ -145,124 +158,100 @@ export default function RegistroAdminForm({ token, onComplete }) {
       <div className="dp-content">
         <div className="dp-card">
 
-          {/* RUT + Buscar */}
-          <div className="dp-search-row">
+          {/* SEARCH */}
+          <div className="registro-search">
             <input
               placeholder="RUT"
-              value={rutInput}
-              onChange={e => setRutInput(e.target.value)}
+              value={rut}
+              onChange={e => setRut(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
             />
-            <button onClick={handleSearch} disabled={loading}>
-              {loading ? "…" : "🔍"}
+            <button className="search-btn" disabled={loading} onClick={handleSearch}>
+              🔍
             </button>
           </div>
 
-          {error   && <div className="dp-error"   style={{ marginBottom: 12 }}>{error}</div>}
-          {success && <div className="dp-success" style={{ marginBottom: 12 }}>{success}</div>}
+          {error   && <div className="registro-error">{error}</div>}
+          {success && <div className="registro-success">{success}</div>}
 
           {(mode === "edit" || mode === "create") && (
-            <>
-              <div className="dp-field">
-                <label className="dp-field-label">Nombre *</label>
-                <input className="dp-input" value={form.nombre} readOnly={ro}
-                  placeholder="Juan" onChange={e => update("nombre", e.target.value)} />
+            <div className="registro-form">
+              <h3>{mode === "edit" ? (isEditing ? "Editando paciente" : "Paciente encontrado") : "Nuevo paciente"}</h3>
+
+              <input placeholder="Nombre" value={form.nombre} readOnly={ro}
+                onChange={e => update("nombre", e.target.value)} />
+
+              <div className="registro-row">
+                <input placeholder="Apellido paterno" value={form.apellidoPaterno} readOnly={ro}
+                  onChange={e => update("apellidoPaterno", e.target.value)} />
+                <input placeholder="Apellido materno" value={form.apellidoMaterno} readOnly={ro}
+                  onChange={e => update("apellidoMaterno", e.target.value)} />
               </div>
 
-              <div className="dp-row">
-                <div className="dp-field">
-                  <label className="dp-field-label">Apellido paterno *</label>
-                  <input className="dp-input" value={form.apellidoPaterno} readOnly={ro}
-                    placeholder="González" onChange={e => update("apellidoPaterno", e.target.value)} />
-                </div>
-                <div className="dp-field">
-                  <label className="dp-field-label">Apellido materno</label>
-                  <input className="dp-input" value={form.apellidoMaterno} readOnly={ro}
-                    placeholder="Pérez" onChange={e => update("apellidoMaterno", e.target.value)} />
-                </div>
-              </div>
-
-              <div className="dp-row">
-                <div className="dp-field">
-                  <label className="dp-field-label">Fecha de nacimiento *</label>
-                  <input type="date" className="dp-input" value={form.fechaNacimiento} readOnly={ro}
-                    onChange={e => update("fechaNacimiento", e.target.value)} />
-                </div>
-                <div className="dp-field">
-                  <label className="dp-field-label">Sexo *</label>
-                  <select className="dp-input" value={form.sexo} disabled={ro}
-                    onChange={e => update("sexo", e.target.value)}>
-                    <option value="">Seleccionar…</option>
-                    <option value="MASCULINO">Masculino</option>
-                    <option value="FEMENINO">Femenino</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="dp-field">
-                <label className="dp-field-label">Previsión</label>
-                <select className="dp-input" value={previsionTipo} disabled={ro}
-                  onChange={e => { setPrevisionTipo(e.target.value); setIsapre(""); }}>
-                  <option value="">Seleccionar…</option>
-                  <option value="Fonasa">Fonasa</option>
-                  <option value="Isapre">Isapre</option>
-                  <option value="Particular">Particular</option>
-                  <option value="Otra">Otra</option>
+              <div className="registro-row">
+                <input type="date" placeholder="Fecha nacimiento" value={form.fechaNacimiento} readOnly={ro}
+                  onChange={e => update("fechaNacimiento", e.target.value)} />
+                <select value={form.sexo} disabled={ro} onChange={e => update("sexo", e.target.value)}>
+                  <option value="">Sexo</option>
+                  <option value="MASCULINO">Masculino</option>
+                  <option value="FEMENINO">Femenino</option>
                 </select>
               </div>
 
-              {previsionTipo === "Isapre" && !ro && (
-                <div className="dp-field">
-                  <label className="dp-field-label">¿Cuál Isapre?</label>
-                  <select className="dp-input" value={isapre} onChange={e => setIsapre(e.target.value)}>
-                    <option value="">Seleccionar…</option>
+              {/* Previsión */}
+              <select value={previsionTipo} disabled={ro}
+                onChange={e => { setPrevisionTipo(e.target.value); setIsapre(""); }}>
+                <option value="">Previsión</option>
+                <option value="Fonasa">Fonasa</option>
+                <option value="Isapre">Isapre</option>
+                <option value="Particular">Particular</option>
+                <option value="Otra">Otra</option>
+              </select>
+
+              {/* Selector isapre — siempre visible cuando prevision es Isapre */}
+              {previsionTipo === "Isapre" && (
+                <>
+                  <select value={isapre} disabled={ro} onChange={e => setIsapre(e.target.value)}>
+                    <option value="">¿Cuál Isapre?</option>
                     {ISAPRES.map(i => <option key={i} value={i}>{i}</option>)}
                   </select>
                   {isapre === "Otra" && (
-                    <input className="dp-input" style={{ marginTop: 8 }} value={otraIsapre}
-                      placeholder="Nombre de su isapre" onChange={e => setOtraIsapre(e.target.value)} />
+                    <input placeholder="Nombre de su Isapre" value={otraIsapre} readOnly={ro}
+                      onChange={e => setOtraIsapre(e.target.value)} />
                   )}
-                </div>
+                </>
               )}
 
-              <div className="dp-field">
-                <label className="dp-field-label">Email *</label>
-                <input type="email" className="dp-input" value={form.email} readOnly={ro}
-                  placeholder="correo@ejemplo.cl" onChange={e => update("email", e.target.value)} />
-                {!ro && <span className="dp-hint">Le enviaremos recordatorios de sus evaluaciones</span>}
-              </div>
+              <input placeholder="Dirección" value={form.direccion} readOnly={ro}
+                onChange={e => update("direccion", e.target.value)} />
 
-              <div className="dp-field">
-                <label className="dp-field-label">Teléfono</label>
-                <input type="tel" className="dp-input" value={form.telefono} readOnly={ro}
-                  placeholder="+56 9 1234 5678" onChange={e => update("telefono", e.target.value)} />
-              </div>
+              <input placeholder="Teléfono" value={form.telefono} readOnly={ro}
+                onChange={e => update("telefono", e.target.value)} />
 
-              <div className="dp-field">
-                <label className="dp-field-label">Dirección</label>
-                <input className="dp-input" value={form.direccion} readOnly={ro}
-                  placeholder="Calle 123, Ciudad" onChange={e => update("direccion", e.target.value)} />
-              </div>
+              <input type="email" placeholder="Email" value={form.email} readOnly={ro}
+                onChange={e => update("email", e.target.value)} />
+              {!ro && <span className="registro-hint">Le enviaremos recordatorios de sus evaluaciones</span>}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                {ro ? (
+              <div className="registro-actions">
+                {mode === "edit" && !isEditing && (
                   <>
-                    <button className="dp-btn-primary"   onClick={() => onComplete?.(buildPayload())}>Confirmar →</button>
-                    <button className="dp-btn-secondary" onClick={() => setIsEditing(true)}>Modificar</button>
+                    <button className="btn-primary" onClick={handleConfirmExisting}>Confirmar</button>
+                    <button className="btn-danger"  onClick={() => setIsEditing(true)}>Modificar</button>
                   </>
-                ) : (
+                )}
+                {(mode === "create" || isEditing) && (
                   <>
-                    <button className="dp-btn-primary" onClick={handleSubmit}
-                      disabled={loading} style={{ opacity: loading ? 0.6 : 1 }}>
-                      {loading ? "Guardando…" : mode === "create" ? "Guardar y continuar →" : "Guardar cambios →"}
+                    <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
+                      {loading ? "Guardando…" : mode === "edit" ? "Guardar cambios" : "Guardar"}
                     </button>
                     {mode === "edit" && (
-                      <button className="dp-btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
+                      <button className="btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
                     )}
                   </>
                 )}
               </div>
-            </>
+
+            </div>
           )}
 
         </div>
