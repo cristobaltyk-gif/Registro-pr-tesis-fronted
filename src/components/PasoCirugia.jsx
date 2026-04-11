@@ -9,8 +9,8 @@ const TIPOS_CIRUGIA = [
 ];
 
 const LADOS = [
-  { id: "derecho",   label: "Derecho"    },
-  { id: "izquierdo", label: "Izquierdo"  },
+  { id: "derecho",   label: "Derecho"   },
+  { id: "izquierdo", label: "Izquierdo" },
 ];
 
 const INDICACIONES = [
@@ -24,7 +24,7 @@ const INDICACIONES = [
   "Otra",
 ];
 
-export default function PasoTipo({ onComplete, onBack, inicial = {} }) {
+export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
   const [tipoCirugia, setTipoCirugia] = useState(inicial.tipo_cirugia || "");
   const [lado,        setLado]        = useState(inicial.lado         || "");
   const [indicacion,  setIndicacion]  = useState(inicial.indicacion   || "");
@@ -53,7 +53,6 @@ export default function PasoTipo({ onComplete, onBack, inicial = {} }) {
 
           {error && <div className="registro-error" style={{ marginBottom: 14 }}>{error}</div>}
 
-          {/* Tipo */}
           <p className="dp-section-title">¿Qué tipo de prótesis le colocaron?</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {TIPOS_CIRUGIA.map(t => (
@@ -74,7 +73,6 @@ export default function PasoTipo({ onComplete, onBack, inicial = {} }) {
             ))}
           </div>
 
-          {/* Lado */}
           {tipoCirugia && (
             <>
               <p className="dp-section-title">¿Qué lado fue operado?</p>
@@ -96,7 +94,6 @@ export default function PasoTipo({ onComplete, onBack, inicial = {} }) {
             </>
           )}
 
-          {/* Indicación */}
           {tipoCirugia && lado && (
             <>
               <p className="dp-section-title">¿Cuál fue el motivo de la cirugía?</p>
@@ -111,13 +108,9 @@ export default function PasoTipo({ onComplete, onBack, inicial = {} }) {
 
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <button className="dp-btn-secondary" style={{ width: "auto", padding: "11px 20px" }}
-              onClick={onBack}>
-              ← Volver
-            </button>
+              onClick={onBack}>← Volver</button>
             {tipoCirugia && lado && indicacion && (
-              <button className="dp-btn-primary" onClick={handleContinuar}>
-                Continuar →
-              </button>
+              <button className="dp-btn-primary" onClick={handleContinuar}>Continuar →</button>
             )}
           </div>
 
