@@ -1,10 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: 'DM Sans', system-ui, sans-serif;
@@ -54,209 +50,189 @@ body {
 /* ── CARD ── */
 .dp-card {
   background: #fff;
-  border: 1px solid #e8edf2;
-  border-radius: 16px;
-  padding: 20px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
   margin-bottom: 14px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* ── FIELDS ── */
-.dp-field {
-  margin-bottom: 14px;
-}
-
-.dp-field-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 5px;
-}
-
-.dp-input {
-  width: 100%;
-  padding: 11px 13px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  color: #0f172a;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  appearance: auto;
-}
-
-.dp-input:focus {
-  border-color: #0f172a;
-  box-shadow: 0 0 0 3px rgba(15,23,42,0.06);
-}
-
-.dp-input:read-only,
-.dp-input:disabled {
-  background: #f8fafc;
-  color: #94a3b8;
-  border-color: #f1f5f9;
-  cursor: default;
-}
-
-/* ── BOTONES ── */
-.dp-btn-primary {
+/* ── SEARCH BAR — igual que ICA ── */
+.registro-search {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  background: #0f172a;
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  padding: 13px 20px;
-  font-size: 15px;
-  font-weight: 700;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  letter-spacing: -0.1px;
-}
-
-.dp-btn-primary:hover    { opacity: 0.85; }
-.dp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.dp-btn-secondary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  background: #fff;
-  color: #0f172a;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.dp-btn-secondary:hover { background: #f8fafc; }
-
-/* ── MENSAJES ── */
-.dp-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.dp-success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #16a34a;
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.dp-loading {
-  font-size: 14px;
-  color: #94a3b8;
-  text-align: center;
-  padding: 48px 20px;
-}
-
-.dp-empty {
-  font-size: 13px;
-  color: #94a3b8;
-  text-align: center;
-}
-
-.dp-hint {
-  display: block;
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-/* ── SECCIÓN ── */
-.dp-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 14px;
-}
-
-/* ── ROW ── */
-.dp-row {
-  display: flex;
-  gap: 10px;
-}
-
-.dp-row .dp-field {
-  flex: 1;
-  min-width: 0;
-}
-
-/* ── SEARCH — campo RUT igual que ICA ── */
-.dp-search-row {
-  display: flex;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.dp-search-row input {
+.registro-search input {
   flex: 1;
-  padding: 11px 14px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
   font-family: 'DM Sans', system-ui, sans-serif;
   color: #0f172a;
   background: #fff;
   outline: none;
-  transition: border-color 0.15s;
 }
 
-.dp-search-row input:focus {
+.registro-search input:focus {
   border-color: #0f172a;
 }
 
-.dp-search-row button {
+.registro-search .search-btn {
+  min-width: 44px;
+  height: 40px;
+  padding: 0;
   background: #0f172a;
-  color: #fff;
+  color: white;
   border: none;
-  border-radius: 10px;
-  padding: 11px 18px;
-  font-size: 18px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: opacity 0.15s;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 
-.dp-search-row button:hover    { opacity: 0.85; }
-.dp-search-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+.registro-search .search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── CAMPOS ── */
+.registro-form h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.registro-form input,
+.registro-form select {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.registro-form select {
+  padding: 0 36px 0 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.registro-form input:focus,
+.registro-form select:focus {
+  border-color: #0f172a;
+}
+
+.registro-form input:read-only,
+.registro-form select:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: default;
+}
+
+/* ── FILA DOS COLUMNAS ── */
+.registro-row {
+  display: flex;
+  gap: 8px;
+}
+
+.registro-row input,
+.registro-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── ERROR ── */
+.registro-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.registro-success {
+  background: #dcfce7;
+  color: #166534;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ── ACCIONES — igual que ICA ── */
+.registro-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.registro-actions button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.registro-actions .btn-primary {
+  background: #16a34a;
+  color: #fff;
+}
+
+.registro-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.registro-actions .btn-secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.registro-actions .btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* ── HINT ── */
+.registro-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: -6px;
+  margin-bottom: 10px;
+  display: block;
+}
 
 /* ── PROGRESS ── */
-.dp-progress-bar {
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.dp-progress-fill {
-  height: 100%;
-  background: #16a34a;
-  border-radius: 99px;
-  transition: width 0.3s ease;
-}
+.dp-progress-bar  { height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.dp-progress-fill { height: 100%; background: #16a34a; border-radius: 99px; transition: width 0.3s ease; }
 
 /* ── EVENT ── */
 .dp-event-diag { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 3px; }
@@ -264,51 +240,34 @@ body {
 
 /* ── ACCIÓN PENDIENTE ── */
 .dp-accion-pendiente {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-top: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: 10px; padding: 12px 14px; margin-top: 12px;
 }
-
 .dp-accion-title { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 2px; }
 .dp-accion-sub   { font-size: 12px; color: #78350f; }
 
 .dp-btn-completar {
-  background: #d97706;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  white-space: nowrap;
-  flex-shrink: 0;
+  background: #d97706; color: #fff; border: none; border-radius: 8px;
+  padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; flex-shrink: 0;
 }
 
-/* ── BADGE ── */
-.dp-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #f1f5f9;
-  color: #475569;
+/* ── SECTION TITLE ── */
+.dp-section-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+
+/* ── LOADING / EMPTY ── */
+.dp-loading { font-size: 14px; color: #94a3b8; text-align: center; padding: 48px 20px; }
+.dp-empty   { font-size: 13px; color: #94a3b8; text-align: center; }
+
+/* ── SUCCESS ── */
+.dp-success {
+  background: #f0fdf4; border: 1px solid #bbf7d0;
+  color: #16a34a; padding: 10px 14px; border-radius: 10px; font-size: 13px;
 }
 
 /* ── FOOTER ── */
 .dp-footer {
-  text-align: center;
-  padding: 16px;
-  font-size: 11px;
-  color: #94a3b8;
-  border-top: 1px solid #e2e8f0;
-  background: #fff;
-   }
+  text-align: center; padding: 16px; font-size: 11px;
+  color: #94a3b8; border-top: 1px solid #e2e8f0; background: #fff;
+  }
