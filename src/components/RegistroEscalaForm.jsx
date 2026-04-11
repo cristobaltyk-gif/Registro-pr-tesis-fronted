@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
+import "../styles/dashboard-pacientes.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-/**
- * RegistroEscalaForm
- * Muestra y recoge respuestas de escalas clínicas (Harris, Oxford, WOMAC).
- *
- * Props:
- *   token      — JWT del paciente
- *   cirugiaId  — ID de la cirugía
- *   periodo    — preop | 3m | 6m | 1a | 2a
- *   onComplete — fn(resultados) — llamado al guardar todas las escalas
- */
 export default function RegistroEscalaForm({ token, cirugiaId, periodo = "preop", onComplete }) {
   const [escalasDisponibles, setEscalasDisponibles] = useState([]);
   const [escalaActual,       setEscalaActual]       = useState(0);
@@ -24,328 +15,194 @@ export default function RegistroEscalaForm({ token, cirugiaId, periodo = "preop"
 
   const PERIODOS_TEXTO = {
     preop: "antes de su cirugía",
-    "3m":  "a los 3 meses de su cirugía",
-    "6m":  "a los 6 meses de su cirugía",
-    "1a":  "al año de su cirugía",
-    "2a":  "a los 2 años de su cirugía",
+    "3m":  "a los 3 meses",
+    "6m":  "a los 6 meses",
+    "1a":  "al año",
+    "2a":  "a los 2 años",
   };
 
-  // ── Cargar escalas aplicables y sus definiciones ─────────
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const [aplicablesRes, definicionesRes] = await Promise.all([
+        const [aplRes, defRes] = await Promise.all([
           fetch(`${API_URL}/api/registro/escalas/aplicables/${cirugiaId}`, {
             headers: { "Authorization": `Bearer ${token}` }
           }),
           fetch(`${API_URL}/api/registro/escalas/definicion`),
         ]);
-
-        const aplicables  = aplicablesRes.ok  ? await aplicablesRes.json()  : { escalas: [] };
-        const defs        = definicionesRes.ok ? await definicionesRes.json() : {};
-
-        setEscalasDisponibles(aplicables.escalas || []);
+        const apl  = aplRes.ok  ? await aplRes.json()  : { escalas: [] };
+        const defs = defRes.ok  ? await defRes.json()  : {};
+        setEscalasDisponibles(apl.escalas || []);
         setDefiniciones(defs);
-      } catch {
-        setError("Error cargando las evaluaciones. Recargue la página.");
-      } finally {
-        setLoading(false);
-      }
+      } catch { setError("Error cargando las evaluaciones."); }
+      finally  { setLoading(false); }
     }
     load();
   }, [cirugiaId, token]);
 
-  function setRespuesta(preguntaId, valor) {
-    setRespuestas(prev => ({ ...prev, [preguntaId]: Number(valor) }));
+  function setRespuesta(id, valor) {
+    setRespuestas(prev => ({ ...prev, [id]: Number(valor) }));
   }
 
-  // ── Verificar respuestas completas ───────────────────────
-  function getPreguntas(escalaKey) {
-    const def = definiciones[escalaKey];
+  function getPreguntas(key) {
+    const def = definiciones[key];
     if (!def) return [];
-    if (escalaKey === "womac") {
-      return def.secciones.flatMap(s => s.preguntas);
-    }
+    if (key === "womac") return def.secciones.flatMap(s => s.preguntas);
     return def.preguntas || [];
   }
 
-  function preguntasSinResponder(escalaKey) {
-    return getPreguntas(escalaKey).filter(p => respuestas[p.id] === undefined);
+  function faltantes(key) {
+    return getPreguntas(key).filter(p => respuestas[p.id] === undefined).length;
   }
 
-  // ── Guardar escala actual y pasar a la siguiente ─────────
   async function handleGuardar() {
     setError(null);
-    const escalaKey = escalasDisponibles[escalaActual];
-    const faltantes = preguntasSinResponder(escalaKey);
-
-    if (faltantes.length > 0) {
-      setError(`Faltan ${faltantes.length} pregunta(s) por responder`);
-      return;
-    }
+    const key = escalasDisponibles[escalaActual];
+    const f   = faltantes(key);
+    if (f > 0) { setError(`Faltan ${f} pregunta(s) por responder`); return; }
 
     setSaving(true);
     try {
       const res = await fetch(`${API_URL}/api/registro/escalas`, {
-        method:  "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          cirugia_id: cirugiaId,
-          periodo,
-          escala:     escalaKey,
-          respuestas,
-        }),
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ cirugia_id: cirugiaId, periodo, escala: key, respuestas }),
       });
-
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.detail || "Error guardando respuestas");
-      }
-
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error guardando"); }
       const data = await res.json();
-      const nuevosResultados = [...resultados, { escala: escalaKey, ...data }];
-      setResultados(nuevosResultados);
+      const nuevos = [...resultados, { escala: key, ...data }];
+      setResultados(nuevos);
       setRespuestas({});
-
-      // Siguiente escala o terminar
       if (escalaActual + 1 < escalasDisponibles.length) {
         setEscalaActual(escalaActual + 1);
       } else {
-        onComplete?.(nuevosResultados);
+        onComplete?.(nuevos);
       }
-
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setError(e.message); }
+    finally     { setSaving(false); }
   }
 
-  if (loading) return <p style={styles.loading}>Cargando evaluación…</p>;
+  if (loading) return <div className="dp-loading">Cargando evaluación…</div>;
+
   if (escalasDisponibles.length === 0) {
     return (
-      <div style={styles.container}>
-        <p style={styles.loading}>No hay evaluaciones disponibles para este tipo de prótesis.</p>
-        <button style={styles.btnPrimary} onClick={() => onComplete?.([])}>Continuar →</button>
+      <div className="dp-root">
+        <div className="dp-content">
+          <div className="dp-card">
+            <p className="dp-empty">No hay evaluaciones disponibles para este tipo de prótesis.</p>
+            <button className="dp-btn-primary" onClick={() => onComplete?.([])}>Continuar →</button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const escalaKey = escalasDisponibles[escalaActual];
-  const def       = definiciones[escalaKey];
-  if (!def) return <p style={styles.loading}>Cargando escala…</p>;
+  const key  = escalasDisponibles[escalaActual];
+  const def  = definiciones[key];
+  if (!def) return <div className="dp-loading">Cargando escala…</div>;
 
-  const totalEscalas   = escalasDisponibles.length;
-  const progreso       = Math.round(((escalaActual) / totalEscalas) * 100);
-  const totalPreguntas = getPreguntas(escalaKey).length;
-  const respondidas    = getPreguntas(escalaKey).filter(p => respuestas[p.id] !== undefined).length;
+  const total      = escalasDisponibles.length;
+  const totalPreg  = getPreguntas(key).length;
+  const respondidas = getPreguntas(key).filter(p => respuestas[p.id] !== undefined).length;
+  const pct        = Math.round((respondidas / totalPreg) * 100);
 
   return (
-    <div style={styles.container}>
-
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerIcon}>📋</div>
-        <div>
-          <div style={styles.headerTitle}>Evaluación {PERIODOS_TEXTO[periodo]}</div>
-          <div style={styles.headerSub}>
-            Cuestionario {escalaActual + 1} de {totalEscalas} — {def.nombre}
-          </div>
+    <div className="dp-root">
+      <div className="dp-header">
+        <div className="dp-header-left">
+          <h1>Evaluación {PERIODOS_TEXTO[periodo]}</h1>
+          <p>Cuestionario {escalaActual + 1} de {total} — {def.nombre}</p>
         </div>
       </div>
 
-      {/* Barra de progreso */}
-      <div style={styles.progressBar}>
-        <div style={{ ...styles.progressFill, width: `${progreso}%` }} />
-      </div>
-      <div style={styles.progressText}>
-        {respondidas} / {totalPreguntas} preguntas respondidas
-      </div>
+      <div className="dp-content">
 
-      {/* Descripción de la escala */}
-      <div style={styles.descripcion}>{def.descripcion}</div>
-
-      {error && <div style={styles.error}>{error}</div>}
-
-      {/* ── Preguntas Harris Hip / Oxford Knee ── */}
-      {escalaKey !== "womac" && def.preguntas?.map((preg, idx) => (
-        <div key={preg.id} style={styles.preguntaBlock}>
-          <div style={styles.preguntaNum}>Pregunta {idx + 1}</div>
-          <div style={styles.preguntaTexto}>{preg.texto}</div>
-          <div style={styles.opcionesGrid}>
-            {preg.opciones.map((op, i) => {
-              const seleccionada = respuestas[preg.id] === op.valor;
-              return (
-                <button
-                  key={i}
-                  style={{
-                    ...styles.opcion,
-                    ...(seleccionada ? styles.opcionSeleccionada : {}),
-                  }}
-                  onClick={() => setRespuesta(preg.id, op.valor)}
-                >
-                  {seleccionada && <span style={styles.checkmark}>✓ </span>}
-                  {op.texto}
-                </button>
-              );
-            })}
+        {/* Progreso */}
+        <div className="dp-card" style={{ padding: "12px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Progreso</span>
+            <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 700 }}>{respondidas}/{totalPreg}</span>
+          </div>
+          <div className="dp-progress-bar">
+            <div className="dp-progress-fill" style={{ width: `${pct}%` }} />
           </div>
         </div>
-      ))}
 
-      {/* ── WOMAC por secciones ── */}
-      {escalaKey === "womac" && def.secciones?.map(seccion => (
-        <div key={seccion.id} style={styles.seccionWomac}>
-          <div style={styles.seccionTitulo}>{seccion.titulo}</div>
-          <div style={styles.seccionIntro}>{seccion.intro}</div>
+        {/* Descripción */}
+        <div className="dp-card" style={{ fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+          {def.descripcion}
+        </div>
 
-          {seccion.preguntas.map((preg, idx) => (
-            <div key={preg.id} style={styles.preguntaWomac}>
-              <div style={styles.preguntaTextoWomac}>{preg.texto}</div>
-              <div style={styles.opcionesRow}>
-                {def.opciones_comunes.map((op, i) => {
-                  const seleccionada = respuestas[preg.id] === op.valor;
-                  return (
-                    <button
-                      key={i}
-                      style={{
-                        ...styles.opcionPill,
-                        ...(seleccionada ? styles.opcionPillSeleccionada : {}),
-                      }}
-                      onClick={() => setRespuesta(preg.id, op.valor)}
-                    >
-                      {op.texto}
-                    </button>
-                  );
-                })}
-              </div>
+        {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
+
+        {/* Harris Hip / Oxford Knee */}
+        {key !== "womac" && def.preguntas?.map((preg, idx) => (
+          <div key={preg.id} className="dp-card">
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", marginBottom: 6 }}>
+              Pregunta {idx + 1}
+            </p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 12, lineHeight: 1.5 }}>
+              {preg.texto}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {preg.opciones.map((op, i) => {
+                const sel = respuestas[preg.id] === op.valor;
+                return (
+                  <button key={i} onClick={() => setRespuesta(preg.id, op.valor)}
+                    style={{
+                      textAlign: "left", padding: "11px 14px",
+                      background: sel ? "#0f172a" : "#fff",
+                      border: `1.5px solid ${sel ? "#0f172a" : "#e2e8f0"}`,
+                      borderRadius: 10, fontSize: 13, cursor: "pointer",
+                      fontFamily: "'DM Sans', system-ui, sans-serif",
+                      color: sel ? "#fff" : "#334155", fontWeight: sel ? 600 : 400,
+                    }}>
+                    {sel && "✓ "}{op.texto}
+                  </button>
+                );
+              })}
             </div>
-          ))}
-        </div>
-      ))}
+          </div>
+        ))}
 
-      {/* Botón guardar */}
-      <button
-        style={{ ...styles.btnPrimary, opacity: saving ? 0.6 : 1 }}
-        onClick={handleGuardar}
-        disabled={saving}
-      >
-        {saving
-          ? "Guardando…"
-          : escalaActual + 1 < totalEscalas
-            ? `Guardar y continuar →`
-            : "Finalizar evaluación ✓"}
-      </button>
+        {/* WOMAC */}
+        {key === "womac" && def.secciones?.map(seccion => (
+          <div key={seccion.id} className="dp-card">
+            <div className="dp-section-title">{seccion.titulo}</div>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>{seccion.intro}</p>
+            {seccion.preguntas.map(preg => (
+              <div key={preg.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid #f1f5f9" }}>
+                <p style={{ fontSize: 13, color: "#334155", marginBottom: 8, fontWeight: 500 }}>{preg.texto}</p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {def.opciones_comunes.map((op, i) => {
+                    const sel = respuestas[preg.id] === op.valor;
+                    return (
+                      <button key={i} onClick={() => setRespuesta(preg.id, op.valor)}
+                        style={{
+                          padding: "6px 12px",
+                          background: sel ? "#0f172a" : "#fff",
+                          border: `1.5px solid ${sel ? "#0f172a" : "#e2e8f0"}`,
+                          borderRadius: 20, fontSize: 12, cursor: "pointer",
+                          fontFamily: "'DM Sans', system-ui, sans-serif",
+                          color: sel ? "#fff" : "#475569", fontWeight: sel ? 700 : 400,
+                        }}>
+                        {op.texto}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
 
+        <button className="dp-btn-primary" onClick={handleGuardar}
+          disabled={saving} style={{ opacity: saving ? 0.6 : 1 }}>
+          {saving ? "Guardando…" : escalaActual + 1 < total ? "Guardar y continuar →" : "Finalizar evaluación ✓"}
+        </button>
+
+      </div>
     </div>
   );
 }
-
-// ── Estilos ──────────────────────────────────────────────────
-const styles = {
-  container: {
-    width: "100%",
-    maxWidth: 560,
-    margin: "0 auto",
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-  },
-  header: {
-    display: "flex", alignItems: "center", gap: 12, marginBottom: 16,
-  },
-  headerIcon:  { fontSize: 28 },
-  headerTitle: { fontSize: 16, fontWeight: 800, color: "#0f172a" },
-  headerSub:   { fontSize: 12, color: "#64748b", marginTop: 2 },
-  progressBar: {
-    height: 6, background: "#e2e8f0", borderRadius: 99,
-    marginBottom: 6, overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%", background: "#0f172a",
-    borderRadius: 99, transition: "width 0.3s ease",
-  },
-  progressText: {
-    fontSize: 11, color: "#94a3b8", marginBottom: 16, textAlign: "right",
-  },
-  descripcion: {
-    fontSize: 13, color: "#475569", lineHeight: 1.6,
-    background: "#f8fafc", border: "1px solid #e2e8f0",
-    borderRadius: 10, padding: "12px 14px", marginBottom: 20,
-  },
-  preguntaBlock: {
-    marginBottom: 20,
-    paddingBottom: 20,
-    borderBottom: "1px solid #f1f5f9",
-  },
-  preguntaNum: {
-    fontSize: 11, fontWeight: 700, color: "#94a3b8",
-    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4,
-  },
-  preguntaTexto: {
-    fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 12, lineHeight: 1.5,
-  },
-  opcionesGrid: {
-    display: "flex", flexDirection: "column", gap: 8,
-  },
-  opcion: {
-    textAlign: "left", padding: "11px 14px",
-    background: "#fff", border: "1.5px solid #e2e8f0",
-    borderRadius: 10, fontSize: 13, cursor: "pointer",
-    fontFamily: "inherit", color: "#334155",
-    transition: "all 0.15s",
-  },
-  opcionSeleccionada: {
-    background: "#0f172a", color: "#fff",
-    borderColor: "#0f172a", fontWeight: 600,
-  },
-  checkmark: { fontWeight: 700 },
-
-  // WOMAC
-  seccionWomac: {
-    background: "#f8fafc", border: "1px solid #e2e8f0",
-    borderRadius: 12, padding: "14px 16px", marginBottom: 16,
-  },
-  seccionTitulo: {
-    fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 4,
-  },
-  seccionIntro: {
-    fontSize: 12, color: "#64748b", marginBottom: 12,
-  },
-  preguntaWomac: {
-    marginBottom: 12, paddingBottom: 12,
-    borderBottom: "1px solid #e2e8f0",
-  },
-  preguntaTextoWomac: {
-    fontSize: 13, color: "#334155", marginBottom: 8, fontWeight: 500,
-  },
-  opcionesRow: {
-    display: "flex", gap: 6, flexWrap: "wrap",
-  },
-  opcionPill: {
-    padding: "6px 12px", background: "#fff",
-    border: "1.5px solid #e2e8f0", borderRadius: 20,
-    fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-    color: "#475569", transition: "all 0.15s",
-  },
-  opcionPillSeleccionada: {
-    background: "#0f172a", color: "#fff",
-    borderColor: "#0f172a", fontWeight: 700,
-  },
-  error: {
-    background: "#fef2f2", border: "1px solid #fecaca",
-    color: "#dc2626", padding: "10px 12px", borderRadius: 8,
-    fontSize: 13, marginBottom: 12,
-  },
-  loading: {
-    fontSize: 14, color: "#64748b", textAlign: "center", padding: 24,
-  },
-  btnPrimary: {
-    width: "100%", background: "#0f172a", color: "#fff",
-    border: "none", borderRadius: 10, padding: "13px 0",
-    fontSize: 14, fontWeight: 700, cursor: "pointer",
-    fontFamily: "inherit", marginTop: 8,
-  },
-};
