@@ -1,71 +1,44 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import RegistroAdminForm   from "./components/RegistroAdminForm";
 import RegistroCirugiaForm from "./components/RegistroCirugiaForm";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
 import "./styles/dashboard-pacientes.css";
 
-const API_URL  = import.meta.env.VITE_API_URL;
 const LOGO_URL = "https://lh3.googleusercontent.com/sitesv/APaQ0SSMBWniO2NWVDwGoaCaQjiel3lBKrmNgpaZZY-ZsYzTawYaf-_7Ad-xfeKVyfCqxa7WgzhWPKHtdaCS0jGtFRrcseP-R8KG1LfY2iYuhZeClvWEBljPLh9KANIClyKSsiSJH8_of4LPUOJUl7cWNwB2HKR7RVH_xB_h9BG-8Nr9jnorb-q2gId2=w300";
+
+// Ícono prótesis de rodilla SVG
+const ProthesisIcon = () => (
+  <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="28" y="4" width="24" height="32" rx="8" fill="#0f172a" opacity="0.15"/>
+    <rect x="32" y="4" width="16" height="32" rx="6" fill="#0f172a" opacity="0.3"/>
+    <rect x="34" y="8" width="12" height="24" rx="4" fill="#0f172a" opacity="0.5"/>
+    <ellipse cx="40" cy="38" rx="14" ry="8" fill="#0f172a" opacity="0.2"/>
+    <ellipse cx="40" cy="38" rx="10" ry="6" fill="#0f172a" opacity="0.4"/>
+    <rect x="30" y="44" width="20" height="30" rx="6" fill="#0f172a" opacity="0.15"/>
+    <rect x="33" y="44" width="14" height="30" rx="5" fill="#0f172a" opacity="0.3"/>
+    <rect x="35" y="48" width="10" height="22" rx="3" fill="#0f172a" opacity="0.5"/>
+    <rect x="26" y="36" width="28" height="10" rx="4" fill="#0f172a" opacity="0.6"/>
+  </svg>
+);
 
 const PASOS_BARRA = ["admin", "cirugia", "escala", "dashboard"];
 const PASOS_LABEL = { admin: "Mis datos", cirugia: "Mi cirugía", escala: "Evaluación", dashboard: "Resumen" };
 
 export default function App() {
-  const [paso,      setPaso]      = useState("rut");
-  const [rutInput,  setRutInput]  = useState("");
+  const [paso,      setPaso]      = useState("inicio");
   const [token,     setToken]     = useState(null);
   const [cirugiaId, setCirugiaId] = useState(null);
   const [periodo,   setPeriodo]   = useState("preop");
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(null);
-
-  useEffect(() => {
-    const t = localStorage.getItem("registro_token");
-    if (t) verificarToken(t);
-  }, []);
-
-  async function verificarToken(t) {
-    try {
-      const res = await fetch(`${API_URL}/api/registro/auth/verificar`, {
-        headers: { "Authorization": `Bearer ${t}` }
-      });
-      if (res.ok) { setToken(t); setPaso("admin"); }
-      else {
-        localStorage.removeItem("registro_token");
-        localStorage.removeItem("registro_rut");
-      }
-    } catch {}
-  }
-
-  async function handleIngresar() {
-    setError(null);
-    const norm = rutInput.trim().toUpperCase().replace(/\./g, "").replace(/ /g, "");
-    if (!norm) { setError("Ingrese su RUT"); return; }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/registro/auth/ingresar`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ rut: norm }),
-      });
-      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error al ingresar"); }
-      const data = await res.json();
-      setToken(data.token);
-      localStorage.setItem("registro_token", data.token);
-      localStorage.setItem("registro_rut",   data.rut);
-      setPaso("admin");
-    } catch (e) { setError(e.message); }
-    finally     { setLoading(false); }
-  }
 
   function handleSalir() {
-    localStorage.removeItem("registro_token");
-    localStorage.removeItem("registro_rut");
-    setToken(null); setRutInput(""); setPaso("rut");
+    setToken(null);
+    setCirugiaId(null);
+    setPaso("inicio");
   }
 
   const pasoIdx = PASOS_BARRA.indexOf(paso);
+  const mostrarBarra = pasoIdx >= 0;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
@@ -83,8 +56,8 @@ export default function App() {
         )}
       </div>
 
-      {/* Barra pasos principales */}
-      {paso !== "rut" && (
+      {/* Barra de pasos */}
+      {mostrarBarra && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 20px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
           {PASOS_BARRA.map((p, i) => (
             <div key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -107,49 +80,61 @@ export default function App() {
         </div>
       )}
 
-      {/* Pantalla RUT */}
-      {paso === "rut" && (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
-            <div style={{ fontSize: 52, marginBottom: 16 }}>🦴</div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>
-              Registro Nacional de Prótesis
-            </h1>
-            <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, marginBottom: 28 }}>
-              Ingrese su RUT para registrar su prótesis articular y realizar el seguimiento de su recuperación.
-            </p>
-            {error && <div className="registro-error" style={{ marginBottom: 16, textAlign: "left" }}>{error}</div>}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input
-                className="dp-input"
-                style={{ flex: 1, fontSize: 16, textAlign: "center" }}
-                value={rutInput}
-                onChange={e => setRutInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleIngresar()}
-                placeholder="12345678-9"
-                autoFocus
-              />
-              <button className="dp-btn-primary"
-                style={{ width: "auto", padding: "10px 20px", opacity: loading ? 0.6 : 1 }}
-                onClick={handleIngresar} disabled={loading}>
-                {loading ? "…" : "Ingresar →"}
-              </button>
+      {/* ── INICIO ── */}
+      {paso === "inicio" && (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+          <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+
+            <div style={{ marginBottom: 24, display: "flex", justifyContent: "center" }}>
+              <ProthesisIcon />
             </div>
-            <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
+
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12, lineHeight: 1.2 }}>
+              Registro Nacional<br />de Prótesis
+            </h1>
+
+            <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 12 }}>
+              Si usted fue operado de una prótesis articular en Chile, puede registrar su cirugía y ayudarnos a mejorar la calidad de la atención en todo el país.
+            </p>
+
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px", marginBottom: 28, textAlign: "left" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>¿Qué incluye el registro?</div>
+              {[
+                "🦴 Tipo de prótesis y cirugía",
+                "🏥 Centro donde fue operado",
+                "🔩 Marca e implante utilizado",
+                "📋 Evaluaciones de seguimiento",
+              ].map(item => (
+                <div key={item} style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>{item}</div>
+              ))}
+            </div>
+
+            <button
+              className="dp-btn-primary"
+              onClick={() => setPaso("admin")}
+              style={{ fontSize: 15, padding: "14px 0" }}
+            >
+              Registrar mi prótesis →
+            </button>
+
+            <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 16, lineHeight: 1.5 }}>
               Su información es confidencial y contribuye al registro nacional de calidad en cirugía articular.
             </p>
+
           </div>
         </div>
       )}
 
-      {/* Formularios */}
-      {paso === "admin" && token && (
+      {/* ── ADMIN ── */}
+      {paso === "admin" && (
         <RegistroAdminForm
+          onTokenReady={(t) => setToken(t)}
           token={token}
           onComplete={() => setPaso("cirugia")}
         />
       )}
 
+      {/* ── CIRUGIA ── */}
       {paso === "cirugia" && token && (
         <RegistroCirugiaForm
           token={token}
@@ -161,6 +146,7 @@ export default function App() {
         />
       )}
 
+      {/* ── ESCALA ── */}
       {paso === "escala" && token && cirugiaId && (
         <RegistroEscalaForm
           token={token}
@@ -170,6 +156,7 @@ export default function App() {
         />
       )}
 
+      {/* ── DASHBOARD ── */}
       {paso === "dashboard" && token && (
         <RegistroDashboard
           token={token}
@@ -184,5 +171,5 @@ export default function App() {
 
     </div>
   );
-        }
-                     
+                                              }
+        
