@@ -13,7 +13,6 @@ const PASOS_LABEL = { admin: "Mis datos", cirugia: "Mi cirugía", escala: "Evalu
 
 export default function App() {
   const [paso,      setPaso]      = useState("rut");
-  const [rut,       setRut]       = useState("");
   const [rutInput,  setRutInput]  = useState("");
   const [token,     setToken]     = useState(null);
   const [cirugiaId, setCirugiaId] = useState(null);
@@ -21,19 +20,25 @@ export default function App() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
 
+  // Al cargar — si hay token guardado ir a admin (no dashboard)
   useEffect(() => {
     const t = localStorage.getItem("registro_token");
     const r = localStorage.getItem("registro_rut");
-    if (t && r) verificarToken(t, r);
+    if (t && r) verificarToken(t);
   }, []);
 
-  async function verificarToken(t, r) {
+  async function verificarToken(t) {
     try {
       const res = await fetch(`${API_URL}/api/registro/auth/verificar`, {
         headers: { "Authorization": `Bearer ${t}` }
       });
-      if (res.ok) { setToken(t); setRut(r); setPaso("dashboard"); }
-      else { localStorage.removeItem("registro_token"); localStorage.removeItem("registro_rut"); }
+      if (res.ok) {
+        setToken(t);
+        setPaso("admin"); // ← siempre admin primero
+      } else {
+        localStorage.removeItem("registro_token");
+        localStorage.removeItem("registro_rut");
+      }
     } catch {}
   }
 
@@ -50,17 +55,18 @@ export default function App() {
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error al ingresar"); }
       const data = await res.json();
-      setToken(data.token); setRut(data.rut);
+      setToken(data.token);
       localStorage.setItem("registro_token", data.token);
       localStorage.setItem("registro_rut",   data.rut);
-      setPaso("admin");
+      setPaso("admin"); // ← siempre admin primero
     } catch (e) { setError(e.message); }
     finally     { setLoading(false); }
   }
 
   function handleSalir() {
-    localStorage.removeItem("registro_token"); localStorage.removeItem("registro_rut");
-    setToken(null); setRut(""); setRutInput(""); setPaso("rut");
+    localStorage.removeItem("registro_token");
+    localStorage.removeItem("registro_rut");
+    setToken(null); setRutInput(""); setPaso("rut");
   }
 
   const pasoIdx = PASOS_BARRA.indexOf(paso);
@@ -117,32 +123,60 @@ export default function App() {
               Ingrese su RUT para registrar su prótesis articular y realizar el seguimiento de su recuperación.
             </p>
             {error && <div className="dp-error" style={{ marginBottom: 16, textAlign: "left" }}>{error}</div>}
-            <div className="dp-search">
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <input
+                className="dp-input"
+                style={{ flex: 1, fontSize: 16, textAlign: "center" }}
                 value={rutInput}
                 onChange={e => setRutInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleIngresar()}
                 placeholder="12345678-9"
                 autoFocus
               />
-              <button onClick={handleIngresar} disabled={loading}>
+              <button className="dp-btn-primary"
+                style={{ width: "auto", padding: "10px 20px", opacity: loading ? 0.6 : 1 }}
+                onClick={handleIngresar} disabled={loading}>
                 {loading ? "…" : "Ingresar →"}
               </button>
             </div>
-            <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5, marginTop: 16 }}>
+            <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
               Su información es confidencial y contribuye al registro nacional de calidad en cirugía articular.
             </p>
           </div>
         </div>
       )}
 
-      {paso === "admin"     && token && <RegistroAdminForm   token={token} onComplete={() => setPaso("cirugia")} />}
-      {paso === "cirugia"   && token && <RegistroCirugiaForm token={token} onComplete={c => { setCirugiaId(c.id || c.data?.id); setPeriodo("preop"); setPaso("escala"); }} />}
-      {paso === "escala"    && token && cirugiaId && <RegistroEscalaForm token={token} cirugiaId={cirugiaId} periodo={periodo} onComplete={() => setPaso("dashboard")} />}
-      {paso === "dashboard" && token && <RegistroDashboard   token={token} onNuevaCirugia={() => { setCirugiaId(null); setPaso("cirugia"); }} onCompletarEscala={(id, per) => { setCirugiaId(id); setPeriodo(per); setPaso("escala"); }} />}
+      {/* Formularios */}
+      {paso === "admin"     && token && (
+        <RegistroAdminForm
+          token={token}
+          onComplete={() => setPaso("cirugia")}
+        />
+      )}
+      {paso === "cirugia"   && token && (
+        <RegistroCirugiaForm
+          token={token}
+          onComplete={c => { setCirugiaId(c.id || c.data?.id); setPeriodo("preop"); setPaso("escala"); }}
+        />
+      )}
+      {paso === "escala"    && token && cirugiaId && (
+        <RegistroEscalaForm
+          token={token}
+          cirugiaId={cirugiaId}
+          periodo={periodo}
+          onComplete={() => setPaso("dashboard")}
+        />
+      )}
+      {paso === "dashboard" && token && (
+        <RegistroDashboard
+          token={token}
+          onNuevaCirugia={() => { setCirugiaId(null); setPaso("cirugia"); }}
+          onCompletarEscala={(id, per) => { setCirugiaId(id); setPeriodo(per); setPaso("escala"); }}
+        />
+      )}
 
       <div className="dp-footer">© {new Date().getFullYear()} Instituto de Cirugía Articular · Curicó, Chile</div>
 
     </div>
   );
-      }
+}
