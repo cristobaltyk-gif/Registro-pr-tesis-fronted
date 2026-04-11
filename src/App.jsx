@@ -1,7 +1,7 @@
 import { useState } from "react";
 import RegistroAdminForm   from "./components/RegistroAdminForm";
 import PasoLugar           from "./components/PasoLugar";
-import PasoTipo            from "./components/PasoTipo";
+import PasoCirugia         from "./components/PasoCirugia";
 import PasoImplante        from "./components/PasoImplante";
 import PasoFecha           from "./components/PasoFecha";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
@@ -10,7 +10,6 @@ import "./styles/dashboard-pacientes.css";
 
 const LOGO_URL = "https://lh3.googleusercontent.com/sitesv/APaQ0SSMBWniO2NWVDwGoaCaQjiel3lBKrmNgpaZZY-ZsYzTawYaf-_7Ad-xfeKVyfCqxa7WgzhWPKHtdaCS0jGtFRrcseP-R8KG1LfY2iYuhZeClvWEBljPLh9KANIClyKSsiSJH8_of4LPUOJUl7cWNwB2HKR7RVH_xB_h9BG-8Nr9jnorb-q2gId2=w300";
 
-// Ícono prótesis SVG
 const ProthesisIcon = () => (
   <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
     <rect x="24" y="4"  width="24" height="28" rx="8"  fill="#0f172a" opacity="0.12"/>
@@ -24,20 +23,14 @@ const ProthesisIcon = () => (
   </svg>
 );
 
-// Pasos del flujo completo
-const FLUJO = ["admin", "lugar", "tipo", "implante", "fecha", "escala", "dashboard"];
-const FLUJO_LABEL = {
-  admin:     "Mis datos",
-  lugar:     "Centro",
-  tipo:      "Cirugía",
-  implante:  "Implante",
-  fecha:     "Fecha",
-  escala:    "Evaluación",
-  dashboard: "Resumen",
+const BARRA = ["admin", "lugar", "cirugia", "implante", "fecha"];
+const BARRA_LABEL = {
+  admin:    "Mis datos",
+  lugar:    "Centro",
+  cirugia:  "Cirugía",
+  implante: "Implante",
+  fecha:    "Fecha",
 };
-
-// Solo mostrar en barra los pasos principales visibles
-const BARRA = ["admin", "lugar", "tipo", "implante", "fecha"];
 
 export default function App() {
   const [paso,      setPaso]      = useState("inicio");
@@ -47,10 +40,7 @@ export default function App() {
   const [periodo,   setPeriodo]   = useState("preop");
 
   function handleSalir() {
-    setToken(null);
-    setDatos({});
-    setCirugiaId(null);
-    setPaso("inicio");
+    setToken(null); setDatos({}); setCirugiaId(null); setPaso("inicio");
   }
 
   function mergeDatos(d) {
@@ -63,61 +53,43 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
 
       {/* Header */}
-      <div style={{
-        background: "#fff", borderBottom: "1px solid #e2e8f0",
-        padding: "14px 20px", display: "flex", alignItems: "center", gap: 12,
-      }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <img src={LOGO_URL} alt="ICA" style={{ height: 40, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>Registro Nacional de Prótesis</div>
           <div style={{ fontSize: 11, color: "#64748b" }}>Instituto de Cirugía Articular · Chile</div>
         </div>
         {token && (
-          <button className="dp-btn-secondary"
-            style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
-            onClick={handleSalir}>
-            Salir
-          </button>
+          <button className="dp-btn-secondary" style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
+            onClick={handleSalir}>Salir</button>
         )}
       </div>
 
-      {/* Barra de pasos — solo cuando está en el flujo */}
+      {/* Barra pasos */}
       {pasoIdx >= 0 && (
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "12px 16px", background: "#fff",
-          borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto",
-        }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
           {BARRA.map((p, i) => (
             <div key={p} style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{
-                width: 26, height: 26, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 700, flexShrink: 0,
                 background: i <= pasoIdx ? "#0f172a" : "#e2e8f0",
                 color:      i <= pasoIdx ? "#fff"    : "#94a3b8",
               }}>
                 {i < pasoIdx ? "✓" : i + 1}
               </div>
-              <span style={{
-                fontSize: 10, fontWeight: 600, marginRight: 4,
-                whiteSpace: "nowrap",
-                color: i <= pasoIdx ? "#0f172a" : "#94a3b8",
-              }}>
-                {FLUJO_LABEL[p]}
+              <span style={{ fontSize: 10, fontWeight: 600, marginRight: 4, whiteSpace: "nowrap", color: i <= pasoIdx ? "#0f172a" : "#94a3b8" }}>
+                {BARRA_LABEL[p]}
               </span>
               {i < BARRA.length - 1 && (
-                <div style={{
-                  width: 16, height: 2, marginRight: 4, flexShrink: 0,
-                  background: i < pasoIdx ? "#0f172a" : "#e2e8f0",
-                }} />
+                <div style={{ width: 16, height: 2, marginRight: 4, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* ── INICIO ── */}
+      {/* INICIO */}
       {paso === "inicio" && (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
           <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
@@ -130,19 +102,13 @@ export default function App() {
             <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 20 }}>
               Si usted fue operado de una prótesis articular en Chile, registre su cirugía y ayúdenos a mejorar la atención en todo el país.
             </p>
-            <div style={{
-              background: "#f8fafc", border: "1px solid #e2e8f0",
-              borderRadius: 12, padding: 16, marginBottom: 28, textAlign: "left",
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
-                El registro incluye:
-              </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 16, marginBottom: 28, textAlign: "left" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>El registro incluye:</div>
               {["🏥 Centro donde fue operado", "🦴 Tipo de cirugía y articulación", "🔩 Marca e implante utilizado", "📋 Evaluaciones de seguimiento"].map(item => (
                 <div key={item} style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>{item}</div>
               ))}
             </div>
-            <button className="dp-btn-primary"
-              style={{ fontSize: 15, padding: "14px 0" }}
+            <button className="dp-btn-primary" style={{ fontSize: 15, padding: "14px 0" }}
               onClick={() => setPaso("admin")}>
               Registrar mi prótesis →
             </button>
@@ -153,7 +119,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ── DATOS PERSONALES ── */}
       {paso === "admin" && (
         <RegistroAdminForm
           onTokenReady={t => setToken(t)}
@@ -162,49 +127,40 @@ export default function App() {
         />
       )}
 
-      {/* ── LUGAR ── */}
       {paso === "lugar" && token && (
         <PasoLugar
-          onComplete={d => { mergeDatos(d); setPaso("tipo"); }}
+          onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
           onBack={() => setPaso("admin")}
           inicial={datos}
         />
       )}
 
-      {/* ── TIPO DE CIRUGÍA ── */}
-      {paso === "tipo" && token && (
-        <PasoTipo
+      {paso === "cirugia" && token && (
+        <PasoCirugia
           onComplete={d => { mergeDatos(d); setPaso("implante"); }}
           onBack={() => setPaso("lugar")}
           inicial={datos}
         />
       )}
 
-      {/* ── IMPLANTE ── */}
       {paso === "implante" && token && (
         <PasoImplante
           articulacion={datos.articulacion}
           onComplete={d => { mergeDatos(d); setPaso("fecha"); }}
-          onBack={() => setPaso("tipo")}
+          onBack={() => setPaso("cirugia")}
           inicial={datos}
         />
       )}
 
-      {/* ── FECHA ── */}
       {paso === "fecha" && token && (
         <PasoFecha
           token={token}
           datos={datos}
-          onComplete={d => {
-            setCirugiaId(d.id);
-            setPeriodo(d.periodo_escala || "preop");
-            setPaso("escala");
-          }}
+          onComplete={d => { setCirugiaId(d.id); setPeriodo(d.periodo_escala || "preop"); setPaso("escala"); }}
           onBack={() => setPaso("implante")}
         />
       )}
 
-      {/* ── ESCALA ── */}
       {paso === "escala" && token && cirugiaId && (
         <RegistroEscalaForm
           token={token}
@@ -214,7 +170,6 @@ export default function App() {
         />
       )}
 
-      {/* ── DASHBOARD ── */}
       {paso === "dashboard" && token && (
         <RegistroDashboard
           token={token}
@@ -229,5 +184,4 @@ export default function App() {
 
     </div>
   );
-                 }
-      
+            }
