@@ -1,11 +1,9 @@
 import { useState } from "react";
 import "../styles/dashboard-pacientes.css";
 
-const TIPOS_CIRUGIA = [
-  { id: "cadera_total",              label: "Prótesis de cadera total",                articulacion: "cadera"  },
-  { id: "cadera_parcial",            label: "Prótesis de cadera parcial (hemiartroplastía)", articulacion: "cadera"  },
-  { id: "rodilla_total",             label: "Prótesis de rodilla total",                articulacion: "rodilla" },
-  { id: "rodilla_unicompartimental", label: "Prótesis de rodilla unicompartimental",    articulacion: "rodilla" },
+const ARTICULACIONES = [
+  { id: "cadera",  label: "Cadera",  icono: "🦴" },
+  { id: "rodilla", label: "Rodilla", icono: "🦵" },
 ];
 
 const LADOS = [
@@ -25,18 +23,17 @@ const INDICACIONES = [
 ];
 
 export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
-  const [tipoCirugia, setTipoCirugia] = useState(inicial.tipo_cirugia || "");
-  const [lado,        setLado]        = useState(inicial.lado         || "");
-  const [indicacion,  setIndicacion]  = useState(inicial.indicacion   || "");
-  const [error,       setError]       = useState(null);
+  const [articulacion, setArticulacion] = useState(inicial.articulacion || "");
+  const [lado,         setLado]         = useState(inicial.lado         || "");
+  const [indicacion,   setIndicacion]   = useState(inicial.indicacion   || "");
+  const [error,        setError]        = useState(null);
 
   function handleContinuar() {
-    if (!tipoCirugia) { setError("Seleccione el tipo de cirugía"); return; }
-    if (!lado)        { setError("Seleccione el lado operado");    return; }
-    if (!indicacion)  { setError("Seleccione la indicación");      return; }
+    if (!articulacion) { setError("Seleccione cadera o rodilla"); return; }
+    if (!lado)         { setError("Seleccione el lado operado");  return; }
+    if (!indicacion)   { setError("Seleccione la indicación");    return; }
     setError(null);
-    const articulacion = TIPOS_CIRUGIA.find(t => t.id === tipoCirugia)?.articulacion || "cadera";
-    onComplete?.({ tipo_cirugia: tipoCirugia, articulacion, lado, indicacion });
+    onComplete?.({ articulacion, lado, indicacion });
   }
 
   return (
@@ -53,27 +50,29 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
 
           {error && <div className="registro-error" style={{ marginBottom: 14 }}>{error}</div>}
 
-          <p className="dp-section-title">¿Qué tipo de prótesis le colocaron?</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {TIPOS_CIRUGIA.map(t => (
-              <button key={t.id} onClick={() => setTipoCirugia(t.id)} style={{
-                textAlign: "left", padding: "13px 16px",
-                border: `1.5px solid ${tipoCirugia === t.id ? "#0f172a" : "#e2e8f0"}`,
+          {/* Articulación */}
+          <p className="dp-section-title">¿Qué articulación fue operada?</p>
+          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            {ARTICULACIONES.map(a => (
+              <button key={a.id} onClick={() => setArticulacion(a.id)} style={{
+                flex: 1, padding: "18px 0",
+                border: `1.5px solid ${articulacion === a.id ? "#0f172a" : "#e2e8f0"}`,
                 borderRadius: 10,
-                background: tipoCirugia === t.id ? "#0f172a" : "#fff",
-                color: tipoCirugia === t.id ? "#fff" : "#0f172a",
-                fontSize: 14, fontWeight: tipoCirugia === t.id ? 700 : 400,
+                background: articulacion === a.id ? "#0f172a" : "#fff",
+                color: articulacion === a.id ? "#fff" : "#0f172a",
+                fontSize: 15, fontWeight: articulacion === a.id ? 700 : 500,
                 cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
-                display: "flex", alignItems: "center", gap: 10,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
               }}>
-                <span style={{ fontSize: 20 }}>{t.articulacion === "cadera" ? "🦴" : "🦵"}</span>
-                {t.label}
-                {tipoCirugia === t.id && <span style={{ marginLeft: "auto" }}>✓</span>}
+                <span style={{ fontSize: 28 }}>{a.icono}</span>
+                {a.label}
+                {articulacion === a.id && <span style={{ fontSize: 12 }}>✓</span>}
               </button>
             ))}
           </div>
 
-          {tipoCirugia && (
+          {/* Lado */}
+          {articulacion && (
             <>
               <p className="dp-section-title">¿Qué lado fue operado?</p>
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -94,7 +93,8 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
             </>
           )}
 
-          {tipoCirugia && lado && (
+          {/* Indicación */}
+          {articulacion && lado && (
             <>
               <p className="dp-section-title">¿Cuál fue el motivo de la cirugía?</p>
               <div className="registro-form">
@@ -109,7 +109,7 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <button className="dp-btn-secondary" style={{ width: "auto", padding: "11px 20px" }}
               onClick={onBack}>← Volver</button>
-            {tipoCirugia && lado && indicacion && (
+            {articulacion && lado && indicacion && (
               <button className="dp-btn-primary" onClick={handleContinuar}>Continuar →</button>
             )}
           </div>
