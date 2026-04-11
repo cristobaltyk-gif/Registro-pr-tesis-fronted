@@ -1,158 +1,81 @@
-import { useEffect, useState } from "react";
-import "../styles/dashboard-pacientes.css";
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-const API_URL = import.meta.env.VITE_API_URL;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-const PERIODOS_LABEL = { preop: "Preop", "3m": "3 meses", "6m": "6 meses", "1a": "1 año", "2a": "2 años" };
-const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
-
-export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEscala }) {
-  const [cirugias, setCirugias] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
-
-  useEffect(() => { load(); }, [token]);
-
-  async function load() {
-    setLoading(true); setError(null);
-    try {
-      const res  = await fetch(`${API_URL}/api/registro/cirugia`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = res.ok ? await res.json() : [];
-      setCirugias(Array.isArray(data) ? data : []);
-    } catch { setError("Error cargando sus datos."); }
-    finally  { setLoading(false); }
-  }
-
-  function getPendientes(c) {
-    const ep = c.escalas_programadas || {};
-    return PERIODOS_ORDEN.filter(p => (ep[p]?.programada !== false) && !ep[p]?.completada);
-  }
-
-  function getProgreso(c) {
-    const ep = c.escalas_programadas || {};
-    return {
-      completados: PERIODOS_ORDEN.filter(p => ep[p]?.completada).length,
-      total: PERIODOS_ORDEN.length,
-    };
-  }
-
-  function formatFecha(iso) {
-    if (!iso) return "—";
-    try {
-      const [y, m, d] = iso.split("-");
-      const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-      return `${d} ${meses[parseInt(m)-1]} ${y}`;
-    } catch { return iso; }
-  }
-
-  if (loading) return <div className="dp-loading">Cargando su historial…</div>;
-
-  return (
-    <div className="dp-root">
-      <div className="dp-header">
-        <div className="dp-header-left">
-          <h1>Mi registro de prótesis</h1>
-          <p>Historial de cirugías y evaluaciones</p>
-        </div>
-        <button className="dp-btn-secondary" style={{ width: "auto", padding: "8px 16px" }}
-          onClick={onNuevaCirugia}>
-          + Agregar cirugía
-        </button>
-      </div>
-
-      <div className="dp-content">
-
-        {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
-
-        {cirugias.length === 0 && (
-          <div className="dp-card" style={{ textAlign: "center", padding: "40px 20px" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🦴</div>
-            <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Sin cirugías registradas</p>
-            <p className="dp-empty" style={{ marginBottom: 20 }}>Registre su primera cirugía para comenzar el seguimiento</p>
-            <button className="dp-btn-primary" onClick={onNuevaCirugia}>
-              Registrar mi cirugía →
-            </button>
-          </div>
-        )}
-
-        {cirugias.map(c => {
-          const pendientes = getPendientes(c);
-          const proximo    = pendientes[0] || null;
-          const { completados, total } = getProgreso(c);
-          const pct = Math.round((completados / total) * 100);
-
-          return (
-            <div key={c.id} className="dp-card">
-
-              {/* Cabecera */}
-              <div style={{ marginBottom: 14 }}>
-                <p className="dp-event-diag">{c.tipo_protesis} — {c.lado}</p>
-                <p className="dp-event-meta">
-                  📅 {formatFecha(c.fecha_cirugia)} · 👨‍⚕️ {c.cirujano?.nombre || "—"} · 🏥 {c.clinica?.nombre || "—"}
-                </p>
-                {c.clinica?.ciudad && (
-                  <p className="dp-event-meta">📍 {c.clinica.ciudad}{c.clinica.region ? `, ${c.clinica.region}` : ""}</p>
-                )}
-              </div>
-
-              {/* Progreso */}
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Evaluaciones</span>
-                  <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 700 }}>{completados}/{total}</span>
-                </div>
-                <div className="dp-progress-bar">
-                  <div className="dp-progress-fill" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-
-              {/* Períodos */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 14 }}>
-                {PERIODOS_ORDEN.map(p => {
-                  const info = (c.escalas_programadas || {})[p] || {};
-                  const ok   = info.completada;
-                  return (
-                    <div key={p} style={{
-                      borderRadius: 8, padding: "8px 4px", textAlign: "center",
-                      background: ok ? "#f0fdf4" : "#f8fafc",
-                      border: `1px solid ${ok ? "#86efac" : "#e2e8f0"}`,
-                    }}>
-                      <div style={{ fontSize: 14 }}>{ok ? "✓" : "○"}</div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: "#475569" }}>{PERIODOS_LABEL[p]}</div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Acción pendiente */}
-              {proximo && (
-                <div className="dp-accion-pendiente">
-                  <div>
-                    <p className="dp-accion-title">📋 Evaluación pendiente — {PERIODOS_LABEL[proximo]}</p>
-                    <p className="dp-accion-sub">Toma menos de 5 minutos</p>
-                  </div>
-                  <button className="dp-btn-completar"
-                    onClick={() => onCompletarEscala?.(c.id, proximo)}>
-                    Completar →
-                  </button>
-                </div>
-              )}
-
-              {pendientes.length === 0 && (
-                <div className="dp-success">✅ Todas las evaluaciones completadas — ¡Gracias!</div>
-              )}
-
-            </div>
-          );
-        })}
-
-        <div className="dp-footer" style={{ marginTop: 20, borderRadius: 10 }}>
-          Sus respuestas son confidenciales y contribuyen al Registro Nacional de Prótesis de Chile.
-        </div>
-
-      </div>
-    </div>
-  );
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
+
+.dp-root { width: 100%; min-height: 100vh; display: flex; flex-direction: column; font-family: 'DM Sans', system-ui, sans-serif; }
+
+.dp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #fff; border-bottom: 1px solid #e2e8f0; gap: 12px; }
+.dp-header-left h1 { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+.dp-header-left p  { font-size: 13px; color: #64748b; margin: 2px 0 0; }
+
+.dp-content { flex: 1; padding: 20px; max-width: 560px; width: 100%; margin: 0 auto; }
+
+.dp-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+
+.dp-field { margin-bottom: 14px; }
+.dp-field-label { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 5px; display: block; }
+
+.dp-input {
+  width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 14px; font-family: 'DM Sans', system-ui, sans-serif; outline: none;
+  color: #0f172a; background: #fff; transition: border-color 0.15s;
+}
+.dp-input:focus          { border-color: #94a3b8; }
+.dp-input:read-only,
+.dp-input:disabled       { background: #f8fafc; color: #64748b; cursor: default; }
+
+.dp-btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #0f172a; color: #fff; border: none; border-radius: 10px;
+  padding: 11px 20px; font-size: 14px; font-weight: 700;
+  font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer;
+  transition: opacity 0.15s; width: 100%;
+}
+.dp-btn-primary:hover    { opacity: 0.88; }
+.dp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dp-btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 10px 20px; font-size: 14px; font-weight: 600;
+  font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer; width: 100%;
+}
+.dp-btn-secondary:hover { background: #f8fafc; }
+
+.dp-error   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.dp-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.dp-loading { font-size: 14px; color: #64748b; text-align: center; padding: 40px 20px; }
+.dp-empty   { font-size: 13px; color: #94a3b8; text-align: center; padding: 24px; }
+.dp-hint    { font-size: 11px; color: #94a3b8; margin-top: 4px; display: block; }
+
+.dp-section-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+
+.dp-event-diag { font-size: 14px; font-weight: 700; color: #0f172a; margin: 0 0 2px; }
+.dp-event-meta { font-size: 12px; color: #64748b; margin: 0; }
+
+.dp-progress-bar  { height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 6px 0; }
+.dp-progress-fill { height: 100%; background: #16a34a; border-radius: 99px; transition: width 0.3s ease; }
+
+.dp-row { display: flex; gap: 10px; }
+.dp-row .dp-field { flex: 1; }
+
+.dp-accion-pendiente { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
+.dp-accion-title { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 2px; }
+.dp-accion-sub   { font-size: 12px; color: #78350f; }
+
+.dp-btn-completar { background: #d97706; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; flex-shrink: 0; }
+
+.dp-footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; background: #fff; }
+
+/* Search */
+.dp-search { display: flex; gap: 8px; margin-bottom: 16px; }
+.dp-search input { flex: 1; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 15px; font-family: 'DM Sans', system-ui, sans-serif; outline: none; color: #0f172a; text-align: center; letter-spacing: 0.03em; }
+.dp-search button { background: #0f172a; color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; }
+  
