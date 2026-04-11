@@ -9,7 +9,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── ROOT ── */
 .dp-root {
   width: 100%;
   min-height: 100vh;
@@ -18,7 +17,6 @@ body {
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
-/* ── HEADER ── */
 .dp-header {
   padding: 20px 20px 16px;
   background: #fff;
@@ -38,7 +36,6 @@ body {
   margin-top: 3px;
 }
 
-/* ── CONTENT ── */
 .dp-content {
   flex: 1;
   padding: 16px 16px 32px;
@@ -47,7 +44,6 @@ body {
   margin: 0 auto;
 }
 
-/* ── CARD ── */
 .dp-card {
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -57,7 +53,48 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* ── SEARCH BAR — igual que ICA ── */
+/* ── BOTONES PRINCIPALES ── */
+.dp-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: -0.1px;
+}
+
+.dp-btn-primary:hover    { opacity: 0.85; }
+.dp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.dp-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #fff;
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dp-btn-secondary:hover { background: #f8fafc; }
+
+/* ── SEARCH BAR ── */
 .registro-search {
   display: flex;
   align-items: center;
@@ -78,9 +115,7 @@ body {
   outline: none;
 }
 
-.registro-search input:focus {
-  border-color: #0f172a;
-}
+.registro-search input:focus { border-color: #0f172a; }
 
 .registro-search .search-btn {
   min-width: 44px;
@@ -97,10 +132,7 @@ body {
   font-size: 18px;
 }
 
-.registro-search .search-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.registro-search .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── CAMPOS ── */
 .registro-form h3 {
@@ -140,95 +172,39 @@ body {
 }
 
 .registro-form input:focus,
-.registro-form select:focus {
-  border-color: #0f172a;
-}
+.registro-form select:focus  { border-color: #0f172a; }
 
 .registro-form input:read-only,
-.registro-form select:disabled {
-  background-color: #f9fafb;
-  color: #6b7280;
-  cursor: default;
-}
+.registro-form select:disabled { background-color: #f9fafb; color: #6b7280; cursor: default; }
 
-/* ── FILA DOS COLUMNAS ── */
-.registro-row {
-  display: flex;
-  gap: 8px;
-}
+.registro-row { display: flex; gap: 8px; }
+.registro-row input, .registro-row select { flex: 1; min-width: 0; }
 
-.registro-row input,
-.registro-row select {
-  flex: 1;
-  min-width: 0;
-}
+/* ── MENSAJES ── */
+.registro-error   { background: #fee2e2; color: #991b1b; padding: 8px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
+.registro-success { background: #dcfce7; color: #166534; padding: 8px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
 
-/* ── ERROR ── */
-.registro-error {
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  margin-bottom: 12px;
-}
+.dp-error   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.dp-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
 
-.registro-success {
-  background: #dcfce7;
-  color: #166534;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-
-/* ── ACCIONES — igual que ICA ── */
-.registro-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-}
+/* ── ACCIONES ── */
+.registro-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
 .registro-actions button {
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  cursor: pointer;
+  height: 40px; padding: 0 16px; border-radius: 8px; border: none;
+  font-size: 14px; font-weight: 600;
+  font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer;
 }
 
-.registro-actions .btn-primary {
-  background: #16a34a;
-  color: #fff;
-}
+.registro-actions .btn-primary  { background: #16a34a; color: #fff; }
+.registro-actions .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.registro-actions .btn-secondary { background: #e5e7eb; color: #111827; }
+.registro-actions .btn-danger    { background: #dc2626; color: #fff; }
 
-.registro-actions .btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.registro-actions .btn-secondary {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-.registro-actions .btn-danger {
-  background: #dc2626;
-  color: #fff;
-}
-
-/* ── HINT ── */
-.registro-hint {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: -6px;
-  margin-bottom: 10px;
-  display: block;
-}
+/* ── HINTS / LABELS ── */
+.registro-hint   { font-size: 11px; color: #94a3b8; margin-top: -6px; margin-bottom: 10px; display: block; }
+.dp-section-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+.dp-hint         { font-size: 11px; color: #94a3b8; margin-top: 4px; display: block; }
 
 /* ── PROGRESS ── */
 .dp-progress-bar  { height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
@@ -253,21 +229,12 @@ body {
   font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; flex-shrink: 0;
 }
 
-/* ── SECTION TITLE ── */
-.dp-section-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
-
 /* ── LOADING / EMPTY ── */
 .dp-loading { font-size: 14px; color: #94a3b8; text-align: center; padding: 48px 20px; }
 .dp-empty   { font-size: 13px; color: #94a3b8; text-align: center; }
-
-/* ── SUCCESS ── */
-.dp-success {
-  background: #f0fdf4; border: 1px solid #bbf7d0;
-  color: #16a34a; padding: 10px 14px; border-radius: 10px; font-size: 13px;
-}
 
 /* ── FOOTER ── */
 .dp-footer {
   text-align: center; padding: 16px; font-size: 11px;
   color: #94a3b8; border-top: 1px solid #e2e8f0; background: #fff;
-  }
+             }
