@@ -20,11 +20,9 @@ export default function App() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
 
-  // Al cargar — si hay token guardado ir a admin (no dashboard)
   useEffect(() => {
     const t = localStorage.getItem("registro_token");
-    const r = localStorage.getItem("registro_rut");
-    if (t && r) verificarToken(t);
+    if (t) verificarToken(t);
   }, []);
 
   async function verificarToken(t) {
@@ -32,10 +30,8 @@ export default function App() {
       const res = await fetch(`${API_URL}/api/registro/auth/verificar`, {
         headers: { "Authorization": `Bearer ${t}` }
       });
-      if (res.ok) {
-        setToken(t);
-        setPaso("admin"); // ← siempre admin primero
-      } else {
+      if (res.ok) { setToken(t); setPaso("admin"); }
+      else {
         localStorage.removeItem("registro_token");
         localStorage.removeItem("registro_rut");
       }
@@ -49,16 +45,16 @@ export default function App() {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/registro/auth/ingresar`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rut: norm }),
+        body:    JSON.stringify({ rut: norm }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error al ingresar"); }
       const data = await res.json();
       setToken(data.token);
       localStorage.setItem("registro_token", data.token);
       localStorage.setItem("registro_rut",   data.rut);
-      setPaso("admin"); // ← siempre admin primero
+      setPaso("admin");
     } catch (e) { setError(e.message); }
     finally     { setLoading(false); }
   }
@@ -87,14 +83,14 @@ export default function App() {
         )}
       </div>
 
-      {/* Barra pasos */}
+      {/* Barra pasos principales */}
       {paso !== "rut" && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "14px 20px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 20px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
           {PASOS_BARRA.map((p, i) => (
             <div key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{
-                width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, fontWeight: 700, flexShrink: 0,
+                width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 700, flexShrink: 0,
                 background: i <= pasoIdx ? "#0f172a" : "#e2e8f0",
                 color:      i <= pasoIdx ? "#fff"    : "#94a3b8",
               }}>
@@ -104,7 +100,7 @@ export default function App() {
                 {PASOS_LABEL[p]}
               </span>
               {i < PASOS_BARRA.length - 1 && (
-                <div style={{ width: 24, height: 2, marginRight: 6, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />
+                <div style={{ width: 20, height: 2, marginRight: 6, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />
               )}
             </div>
           ))}
@@ -122,7 +118,7 @@ export default function App() {
             <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, marginBottom: 28 }}>
               Ingrese su RUT para registrar su prótesis articular y realizar el seguimiento de su recuperación.
             </p>
-            {error && <div className="dp-error" style={{ marginBottom: 16, textAlign: "left" }}>{error}</div>}
+            {error && <div className="registro-error" style={{ marginBottom: 16, textAlign: "left" }}>{error}</div>}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <input
                 className="dp-input"
@@ -147,19 +143,25 @@ export default function App() {
       )}
 
       {/* Formularios */}
-      {paso === "admin"     && token && (
+      {paso === "admin" && token && (
         <RegistroAdminForm
           token={token}
           onComplete={() => setPaso("cirugia")}
         />
       )}
-      {paso === "cirugia"   && token && (
+
+      {paso === "cirugia" && token && (
         <RegistroCirugiaForm
           token={token}
-          onComplete={c => { setCirugiaId(c.id || c.data?.id); setPeriodo("preop"); setPaso("escala"); }}
+          onComplete={c => {
+            setCirugiaId(c.id || c.data?.id);
+            setPeriodo(c.periodo_escala || "preop");
+            setPaso("escala");
+          }}
         />
       )}
-      {paso === "escala"    && token && cirugiaId && (
+
+      {paso === "escala" && token && cirugiaId && (
         <RegistroEscalaForm
           token={token}
           cirugiaId={cirugiaId}
@@ -167,6 +169,7 @@ export default function App() {
           onComplete={() => setPaso("dashboard")}
         />
       )}
+
       {paso === "dashboard" && token && (
         <RegistroDashboard
           token={token}
@@ -175,8 +178,11 @@ export default function App() {
         />
       )}
 
-      <div className="dp-footer">© {new Date().getFullYear()} Instituto de Cirugía Articular · Curicó, Chile</div>
+      <div className="dp-footer">
+        © {new Date().getFullYear()} Instituto de Cirugía Articular · Curicó, Chile
+      </div>
 
     </div>
   );
-}
+        }
+                     
