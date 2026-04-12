@@ -4,11 +4,10 @@ import "../styles/dashboard-pacientes.css";
 const API_URL = import.meta.env.VITE_API_URL;
 
 const PERIODO_LABEL = {
-  preop: "Evaluación postoperatoria inmediata",
-  "3m":  "Evaluación 3 meses",
-  "6m":  "Evaluación 6 meses",
-  "1a":  "Evaluación 1 año",
-  "2a":  "Evaluación 2 años",
+  "postop": "Evaluación postoperatoria temprana (0-3 meses)",
+  "6m":     "Evaluación 6 meses",
+  "1a":     "Evaluación 1 año",
+  "2a":     "Evaluación 2 años o más",
 };
 
 function getDias(fechaISO) {
@@ -19,10 +18,9 @@ function getDias(fechaISO) {
 
 function getPeriodo(dias) {
   if (dias === null) return null;
-  if (dias < 60)  return "preop";
-  if (dias < 150) return "3m";
-  if (dias < 270) return "6m";
-  if (dias < 545) return "1a";
+  if (dias <= 90)  return "postop";
+  if (dias <= 270) return "6m";
+  if (dias <= 545) return "1a";
   return "2a";
 }
 
@@ -35,8 +33,8 @@ export default function PasoFecha({ token, datos, onComplete, onBack }) {
   const periodo = getPeriodo(dias);
 
   async function handleGuardar() {
-    if (!fechaCirugia)  { setError("Ingrese la fecha de su cirugía"); return; }
-    if (dias === null)  { setError("La fecha no puede ser futura — ingrese la fecha real de su operación"); return; }
+    if (!fechaCirugia) { setError("Ingrese la fecha de su cirugía"); return; }
+    if (dias === null)  { setError("La fecha no puede ser futura"); return; }
     setError(null);
     setSaving(true);
     try {
@@ -103,24 +101,21 @@ export default function PasoFecha({ token, datos, onComplete, onBack }) {
             />
           </div>
 
-          {/* Resumen días postop */}
-          {fechaCirugia && dias !== null && (
+          {fechaCirugia && dias !== null && periodo && (
             <div style={{
               background: "#f0fdf4", border: "1px solid #bbf7d0",
               borderRadius: 10, padding: "14px 16px", marginTop: 8,
             }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#166534", marginBottom: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#166534", marginBottom: 8 }}>
                 📅 {dias === 0 ? "Operado hoy" : `${dias} día${dias !== 1 ? "s" : ""} desde la cirugía`}
               </div>
-              {periodo && (
-                <div style={{
-                  background: "#0f172a", color: "#fff",
-                  borderRadius: 8, padding: "8px 12px",
-                  fontSize: 12, fontWeight: 700, display: "inline-block", marginTop: 4,
-                }}>
-                  📋 {PERIODO_LABEL[periodo]}
-                </div>
-              )}
+              <div style={{
+                background: "#0f172a", color: "#fff",
+                borderRadius: 8, padding: "8px 12px",
+                fontSize: 12, fontWeight: 700, display: "inline-block",
+              }}>
+                📋 {PERIODO_LABEL[periodo]}
+              </div>
             </div>
           )}
 
@@ -139,4 +134,4 @@ export default function PasoFecha({ token, datos, onComplete, onBack }) {
       </div>
     </div>
   );
-      }
+}
