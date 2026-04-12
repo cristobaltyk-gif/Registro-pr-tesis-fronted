@@ -37,7 +37,7 @@ export default function App() {
   const [token,     setToken]     = useState(null);
   const [datos,     setDatos]     = useState({});
   const [cirugiaId, setCirugiaId] = useState(null);
-  const [periodo,   setPeriodo]   = useState("preop");
+  const [periodo,   setPeriodo]   = useState("postop");
 
   function handleSalir() {
     setToken(null); setDatos({}); setCirugiaId(null); setPaso("inicio");
@@ -156,7 +156,7 @@ export default function App() {
         <PasoFecha
           token={token}
           datos={datos}
-          onComplete={d => { setCirugiaId(d.id); setPeriodo(d.periodo_escala || "preop"); setPaso("escala"); }}
+          onComplete={d => { setCirugiaId(d.id); setPeriodo(d.periodo_escala || "postop"); setPaso("escala"); }}
           onBack={() => setPaso("implante")}
         />
       )}
@@ -165,6 +165,7 @@ export default function App() {
         <RegistroEscalaForm
           token={token}
           cirugiaId={cirugiaId}
+          articulacion={datos.articulacion}
           periodo={periodo}
           onComplete={() => setPaso("dashboard")}
         />
@@ -174,7 +175,7 @@ export default function App() {
         <RegistroDashboard
           token={token}
           onNuevaCirugia={() => { setDatos({}); setPaso("lugar"); }}
-          onCompletarEscala={(id, per) => { setCirugiaId(id); setPeriodo(per); setPaso("escala"); }}
+          onCompletarEscala={(id, per, art) => { setCirugiaId(id); setPeriodo(per); mergeDatos({ articulacion: art }); setPaso("escala"); }}
         />
       )}
 
@@ -184,4 +185,4 @@ export default function App() {
 
     </div>
   );
-            }
+}
