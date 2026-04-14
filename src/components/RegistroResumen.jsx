@@ -10,8 +10,6 @@ const ESTADO_COLOR = {
 const SEGMENTOS = {
   cadera: "🦴 Cadera",
   rodilla: "🦵 Rodilla", 
-  hombro: "🦾 Hombro",
-  tobillo: "🦶 Tobillo"
 };
 
 export default function RegistroResumen({ cirugias, onNuevaCirugia, onCompletarEscala }) {
