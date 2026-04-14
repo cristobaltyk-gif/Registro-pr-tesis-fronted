@@ -41,7 +41,6 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  // ── Buscar: genera token + busca datos ──────────────────
   async function handleSearch() {
     setError(null);
     const norm = normalizeRut(rutInput);
@@ -49,7 +48,6 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
 
     setLoading(true);
     try {
-      // 1. Generar token JWT con el RUT
       const authRes = await fetch(`${API_URL}/api/registro/auth/ingresar`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +59,6 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
       setToken(t);
       onTokenReady?.(t);
 
-      // 2. Buscar datos del paciente
       const res = await fetch(`${API_URL}/api/registro/admin/${encodeURIComponent(norm)}`, {
         headers: { "Authorization": `Bearer ${t}` }
       });
@@ -143,7 +140,7 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j?.detail || "Error guardando"); }
       setSuccess("Datos guardados");
       setIsEditing(false); setMode("edit");
-      setTimeout(() => { setSuccess(null); onComplete?.(payload); }, 1200);
+      setTimeout(() => { setSuccess(null); onComplete?.(payload, token); }, 1200);
     } catch (e) { setError(e.message); }
     finally     { setLoading(false); }
   }
@@ -167,7 +164,6 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
       <div className="dp-content">
         <div className="dp-card">
 
-          {/* RUT + Buscar */}
           <div className="registro-search">
             <input
               placeholder="RUT"
@@ -245,8 +241,8 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
               <div className="registro-actions">
                 {ro ? (
                   <>
-                    <button className="btn-primary"  onClick={() => onComplete?.(buildPayload())}>Confirmar →</button>
-                    <button className="btn-danger"   onClick={() => setIsEditing(true)}>Modificar</button>
+                    <button className="btn-primary" onClick={() => onComplete?.(buildPayload(), token)}>Confirmar →</button>
+                    <button className="btn-danger"  onClick={() => setIsEditing(true)}>Modificar</button>
                   </>
                 ) : (
                   <>
@@ -268,4 +264,4 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
       </div>
     </div>
   );
-              }
+                    }
