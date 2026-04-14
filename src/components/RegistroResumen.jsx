@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ProthesisIcon } from "../App"; // Ajusta la ruta según tu estructura
+
 
 const ESTADO_COLOR = {
   pendiente: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e" },
