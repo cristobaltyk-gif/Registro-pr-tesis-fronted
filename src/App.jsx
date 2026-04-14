@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RegistroAdminForm   from "./components/RegistroAdminForm";
 import PasoLugar           from "./components/PasoLugar";
 import PasoCirugia         from "./components/PasoCirugia";
@@ -6,6 +6,7 @@ import PasoImplante        from "./components/PasoImplante";
 import PasoFecha           from "./components/PasoFecha";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
+import RegistroResumen     from "./components/RegistroResumen"; // ← NUEVO
 import "./styles/dashboard-pacientes.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -25,13 +26,12 @@ const ProthesisIcon = () => (
   </svg>
 );
 
-const BARRA = ["admin", "lugar", "cirugia", "implante", "fecha"];
-const BARRA_LABEL = {
-  admin:    "Mis datos",
-  lugar:    "Centro",
-  cirugia:  "Cirugía",
-  implante: "Implante",
-  fecha:    "Fecha",
+// Esquemas por prótesis (evaluaciones requeridas)
+const ESQUEMAS_PROTESIS = {
+  cadera: { revision: 6, primaria: 10 },    // 6 revisiones, 10 primarias
+  rodilla: { revision: 6, primaria: 10 },
+  hombro: { revision: 5, primaria: 8 },
+  tobillo: { revision: 4, primaria: 7 }
 };
 
 export default function App() {
@@ -40,15 +40,35 @@ export default function App() {
   const [datos,     setDatos]     = useState({});
   const [cirugiaId, setCirugiaId] = useState(null);
   const [periodo,   setPeriodo]   = useState("postop");
+  const [cirugias,  setCirugias]  = useState([]); // ← NUEVO: lista completa
+  const [esquema,   setEsquema]   = useState(null); // ← NUEVO: esquema actual
 
   function handleSalir() {
-    setToken(null); setDatos({}); setCirugiaId(null); setPaso("inicio");
+    setToken(null); 
+    setDatos({}); 
+    setCirugiaId(null); 
+    setPaso("inicio");
   }
 
   function mergeDatos(d) {
     setDatos(prev => ({ ...prev, ...d }));
   }
 
+  // ← NUEVO: Verificar límites y tipo de cirugía
+  function validarTipoCirugia(nuevaCirugia) {
+    const existePrimaria = cirugias.find(c => 
+      c.lado === nuevaCirugia.lado && 
+      c.segmento === nuevaCirugia.segmento && 
+      c.tipo === 'primaria'
+    );
+    
+    if (existePrimaria) {
+      return 'revision';
+    }
+    return 'primaria';
+  }
+
+  // ← NUEVO: Cargar cirugías y mostrar resumen
   async function handleAdminComplete(payload, tok) {
     const t = tok || token;
     try {
@@ -57,16 +77,42 @@ export default function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.cirugias?.length > 0) {
-          setPaso("dashboard");
+        setCirugias(data.cirugias || []);
+        
+        // Si no hay cirugías → nuevo registro
+        if (data.cirugias?.length === 0) {
+          setPaso("lugar");
           return;
         }
+        
+        // Si hay cirugías → mostrar resumen primero
+        setPaso("resumen");
       }
-    } catch {}
-    setPaso("lugar");
+    } catch (e) {
+      console.error("Error cargando cirugías:", e);
+      setPaso("lugar");
+    }
   }
 
-  const pasoIdx = BARRA.indexOf(paso);
+  // ← NUEVO: Al completar fecha, asignar esquema
+  function handleFechaComplete(d) {
+    const tipo = validarTipoCirugia(d);
+    const esquemaProtesis = ESQUEMAS_PROTESIS[d.segmento] || { revision: 4, primaria: 6 };
+    const totalEvaluaciones = tipo === 'primaria' ? esquemaProtesis.primaria : esquemaProtesis.revision;
+    
+    setEsquema({ 
+      tipo, 
+      total: totalEvaluaciones, 
+      completadas: 0,
+      segmento: d.segmento 
+    });
+    
+    setCirugiaId(d.id); 
+    setPeriodo(d.periodo_escala || "postop"); 
+    setPaso("escala");
+  }
+
+  const pasoIdx = ["admin", "lugar", "cirugia", "implante", "fecha"].indexOf(paso);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
@@ -84,10 +130,10 @@ export default function App() {
         )}
       </div>
 
-      {/* Barra pasos — solo en flujo de registro nuevo */}
+      {/* Barra pasos */}
       {pasoIdx >= 0 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
-          {BARRA.map((p, i) => (
+          {["admin", "lugar", "cirugia", "implante", "fecha"].map((p, i) => (
             <div key={p} style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{
                 width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
@@ -98,11 +144,9 @@ export default function App() {
                 {i < pasoIdx ? "✓" : i + 1}
               </div>
               <span style={{ fontSize: 10, fontWeight: 600, marginRight: 4, whiteSpace: "nowrap", color: i <= pasoIdx ? "#0f172a" : "#94a3b8" }}>
-                {BARRA_LABEL[p]}
+                {p === 'admin' ? 'Datos' : p.charAt(0).toUpperCase() + p.slice(1)}
               </span>
-              {i < BARRA.length - 1 && (
-                <div style={{ width: 16, height: 2, marginRight: 4, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />
-              )}
+              {i < 4 && <div style={{ width: 16, height: 2, marginRight: 4, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />}
             </div>
           ))}
         </div>
@@ -111,6 +155,7 @@ export default function App() {
       {/* INICIO */}
       {paso === "inicio" && (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+          {/* ... mismo contenido de inicio ... */}
           <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
               <ProthesisIcon />
@@ -121,21 +166,25 @@ export default function App() {
             <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 20 }}>
               Si usted fue operado de una prótesis articular en Chile, registre su cirugía y ayúdenos a mejorar la atención en todo el país.
             </p>
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 16, marginBottom: 28, textAlign: "left" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>El registro incluye:</div>
-              {["🏥 Centro donde fue operado", "🦴 Tipo de cirugía y articulación", "🔩 Marca e implante utilizado", "📋 Evaluaciones de seguimiento"].map(item => (
-                <div key={item} style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>{item}</div>
-              ))}
-            </div>
             <button className="dp-btn-primary" style={{ fontSize: 15, padding: "14px 0" }}
               onClick={() => setPaso("admin")}>
               Registrar mi prótesis →
             </button>
-            <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 14, lineHeight: 1.5 }}>
-              Su información es confidencial y contribuye al registro nacional de calidad en cirugía articular.
-            </p>
           </div>
         </div>
+      )}
+
+      {/* NUEVO: RESUMEN post-login */}
+      {paso === "resumen" && token && (
+        <RegistroResumen
+          cirugias={cirugias}
+          onNuevaCirugia={() => { setDatos({}); setPaso("lugar"); }}
+          onCompletarEscala={(id, per, art) => { 
+            setCirugiaId(id); 
+            setPeriodo(per); 
+            setPaso("escala"); 
+          }}
+        />
       )}
 
       {paso === "admin" && (
@@ -149,7 +198,7 @@ export default function App() {
       {paso === "lugar" && token && (
         <PasoLugar
           onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
-          onBack={() => setPaso("admin")}
+          onBack={() => setPaso("resumen")}
           inicial={datos}
         />
       )}
@@ -175,7 +224,7 @@ export default function App() {
         <PasoFecha
           token={token}
           datos={datos}
-          onComplete={d => { setCirugiaId(d.id); setPeriodo(d.periodo_escala || "postop"); setPaso("escala"); }}
+          onComplete={handleFechaComplete}  // ← CAMBIADO
           onBack={() => setPaso("implante")}
         />
       )}
@@ -186,22 +235,14 @@ export default function App() {
           cirugiaId={cirugiaId}
           articulacion={datos.articulacion}
           periodo={periodo}
-          onComplete={() => setPaso("dashboard")}
-        />
-      )}
-
-      {paso === "dashboard" && token && (
-        <RegistroDashboard
-          token={token}
-          onNuevaCirugia={() => { setDatos({}); setPaso("lugar"); }}
-          onCompletarEscala={(id, per, art) => { setCirugiaId(id); setPeriodo(per); mergeDatos({ articulacion: art }); setPaso("escala"); }}
+          esquema={esquema}  // ← NUEVO: pasa esquema
+          onComplete={() => setPaso("resumen")}
         />
       )}
 
       <div className="dp-footer">
         © {new Date().getFullYear()} Instituto de Cirugía Articular · Curicó, Chile
       </div>
-
     </div>
   );
-                       }
+              }
