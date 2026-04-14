@@ -8,6 +8,8 @@ import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
 import "./styles/dashboard-pacientes.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const LOGO_URL = "https://lh3.googleusercontent.com/sitesv/APaQ0SSMBWniO2NWVDwGoaCaQjiel3lBKrmNgpaZZY-ZsYzTawYaf-_7Ad-xfeKVyfCqxa7WgzhWPKHtdaCS0jGtFRrcseP-R8KG1LfY2iYuhZeClvWEBljPLh9KANIClyKSsiSJH8_of4LPUOJUl7cWNwB2HKR7RVH_xB_h9BG-8Nr9jnorb-q2gId2=w300";
 
 const ProthesisIcon = () => (
@@ -47,6 +49,23 @@ export default function App() {
     setDatos(prev => ({ ...prev, ...d }));
   }
 
+  async function handleAdminComplete(payload, tok) {
+    const t = tok || token;
+    try {
+      const res = await fetch(`${API_URL}/api/registro/cirugia`, {
+        headers: { "Authorization": `Bearer ${t}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cirugias?.length > 0) {
+          setPaso("dashboard");
+          return;
+        }
+      }
+    } catch {}
+    setPaso("lugar");
+  }
+
   const pasoIdx = BARRA.indexOf(paso);
 
   return (
@@ -65,7 +84,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Barra pasos */}
+      {/* Barra pasos — solo en flujo de registro nuevo */}
       {pasoIdx >= 0 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", background: "#fff", borderBottom: "1px solid #e2e8f0", gap: 0, overflowX: "auto" }}>
           {BARRA.map((p, i) => (
@@ -123,7 +142,7 @@ export default function App() {
         <RegistroAdminForm
           onTokenReady={t => setToken(t)}
           token={token}
-          onComplete={() => setPaso("lugar")}
+          onComplete={(payload, tok) => handleAdminComplete(payload, tok)}
         />
       )}
 
@@ -185,4 +204,4 @@ export default function App() {
 
     </div>
   );
-}
+      }
