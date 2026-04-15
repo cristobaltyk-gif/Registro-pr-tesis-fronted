@@ -6,6 +6,7 @@ import PasoImplante from "./components/PasoImplante";
 import PasoFecha from "./components/PasoFecha";
 import RegistroEscalaForm from "./components/RegistroEscalaForm";
 import RegistroDashboard from "./components/RegistroDashboard";
+import AppInicio from "./components/AppInicio";
 import "./styles/app.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -122,16 +123,7 @@ export default function App() {
     <div className="app-shell">
       <main className="app-main">
         {paso === "inicio" && (
-          <div className="app-container">
-            <div className="app-center" style={{ minHeight: "100vh" }}>
-              <button
-                className="app-btn app-btn--primary"
-                onClick={() => setPaso("admin")}
-              >
-                Ingresar
-              </button>
-            </div>
-          </div>
+          <AppInicio onIngresar={() => setPaso("admin")} />
         )}
 
         {paso === "admin" && (
@@ -151,6 +143,7 @@ export default function App() {
               setPeriodo(per);
               setPaso("escala");
             }}
+            onSalir={handleSalir}
           />
         )}
 
@@ -210,4 +203,4 @@ export default function App() {
       </main>
     </div>
   );
-        }
+}
