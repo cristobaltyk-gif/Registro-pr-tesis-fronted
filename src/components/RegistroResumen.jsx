@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ProthesisIcon from "../ui/ProthesisIcon";
+import { ProthesisIcon } from "./ui/ProthesisIcon";
 
 const ESTADO_COLOR = {
   pendiente: { bg: "#fef3c7", border: "#f59e0b", text: "#92400e" },
