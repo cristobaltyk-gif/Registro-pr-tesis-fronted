@@ -637,4 +637,179 @@ function SegmentoActionsModal({
   segmento,
   formatFecha,
   onClose,
-  onNuevaP
+  onNuevaPrimaria,
+  onNuevaRevision,
+  onCompletarEscala,
+}) {
+  const tieneProtesis = segmento.tieneProtesis;
+  const proximo = segmento.resumenEscalas.proximo;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15,23,42,0.42)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 460,
+          borderRadius: 18,
+          background: "#fff",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+          padding: 18,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "start",
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#0f172a" }}>
+              {segmento.label}
+            </h3>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+              {tieneProtesis
+                ? `Última cirugía: ${formatFecha(segmento.actual?.fecha_cirugia)}`
+                : "Sin cirugía registrada"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: "none",
+              background: "#f1f5f9",
+              borderRadius: 10,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {tieneProtesis ? (
+          <>
+            <div
+              style={{
+                border: "1px solid #dbeafe",
+                background: "#eff6ff",
+                borderRadius: 14,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#1e3a8a",
+                  marginBottom: 6,
+                }}
+              >
+                Prótesis activa en este segmento
+              </div>
+
+              <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
+                {segmento.actual?.tipo_protesis || segmento.tipo} —{" "}
+                {segmento.actual?.lado || segmento.lado}
+                <br />
+                Cirujano: {segmento.actual?.cirujano?.nombre || "—"}
+                <br />
+                Clínica: {segmento.actual?.clinica?.nombre || "—"}
+              </div>
+            </div>
+
+            <EscalasBarMini escalas={segmento.actual?.escalas_programadas || {}} />
+
+            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => onNuevaRevision(segmento)}
+                className="dp-btn-primary"
+              >
+                Ingresar revisión
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onCompletarEscala(segmento)}
+                className="dp-btn-secondary"
+                disabled={!proximo}
+                style={{
+                  opacity: proximo ? 1 : 0.5,
+                  cursor: proximo ? "pointer" : "not-allowed",
+                }}
+              >
+                {proximo
+                  ? `Ingresar escala evolutiva — ${PERIODOS_LABEL[proximo]}`
+                  : "Sin escalas pendientes"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            <div
+              style={{
+                border: "1px solid #e2e8f0",
+                background: "#f8fafc",
+                borderRadius: 14,
+                padding: 12,
+                fontSize: 13,
+                color: "#475569",
+                lineHeight: 1.5,
+              }}
+            >
+              Este segmento está libre. Desde aquí solo corresponde ingresar una
+              cirugía primaria.
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNuevaPrimaria(segmento)}
+              className="dp-btn-primary"
+            >
+              Ingresar cirugía primaria
+            </button>
+          </div>
+        )}
+
+        {segmento.errorPrimarias && (
+          <div
+            style={{
+              marginTop: 14,
+              borderRadius: 12,
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#b91c1c",
+              padding: 12,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            Error de sistema: existen dos primarias en el mismo segmento/lado.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
