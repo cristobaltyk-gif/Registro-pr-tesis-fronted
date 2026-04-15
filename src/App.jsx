@@ -6,7 +6,7 @@ import PasoImplante        from "./components/PasoImplante";
 import PasoFecha           from "./components/PasoFecha";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
-import RegistroResumen     from "./components/RegistroResumen"; // ← NUEVO
+import RegistroResumen     from "./components/RegistroResumen";
 import "./styles/dashboard-pacientes.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -40,8 +40,8 @@ export default function App() {
   const [datos,     setDatos]     = useState({});
   const [cirugiaId, setCirugiaId] = useState(null);
   const [periodo,   setPeriodo]   = useState("postop");
-  const [cirugias,  setCirugias]  = useState([]); // ← NUEVO: lista completa
-  const [esquema,   setEsquema]   = useState(null); // ← NUEVO: esquema actual
+  const [cirugias,  setCirugias]  = useState([]);
+  const [esquema,   setEsquema]   = useState(null);
 
   function handleSalir() {
     setToken(null); 
@@ -54,7 +54,7 @@ export default function App() {
     setDatos(prev => ({ ...prev, ...d }));
   }
 
-  // ← NUEVO: Verificar límites y tipo de cirugía
+  // Verificar límites y tipo de cirugía
   function validarTipoCirugia(nuevaCirugia) {
     const existePrimaria = cirugias.find(c => 
       c.lado === nuevaCirugia.lado && 
@@ -68,7 +68,7 @@ export default function App() {
     return 'primaria';
   }
 
-  // ← NUEVO: Cargar cirugías y mostrar resumen
+  // ✅ MODIFICADO: SIEMPRE mostrar resumen después del login
   async function handleAdminComplete(payload, tok) {
     const t = tok || token;
     try {
@@ -78,23 +78,16 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setCirugias(data.cirugias || []);
-        
-        // Si no hay cirugías → nuevo registro
-        if (data.cirugias?.length === 0) {
-          setPaso("lugar");
-          return;
-        }
-        
-        // Si hay cirugías → mostrar resumen primero
-        setPaso("resumen");
       }
+      // ✅ SIEMPRE ir a resumen, incluso sin cirugías o con error
+      setPaso("resumen");
     } catch (e) {
       console.error("Error cargando cirugías:", e);
-      setPaso("lugar");
+      setPaso("resumen");
     }
   }
 
-  // ← NUEVO: Al completar fecha, asignar esquema
+  // Al completar fecha, asignar esquema
   function handleFechaComplete(d) {
     const tipo = validarTipoCirugia(d);
     const esquemaProtesis = ESQUEMAS_PROTESIS[d.segmento] || { revision: 4, primaria: 6 };
@@ -155,7 +148,6 @@ export default function App() {
       {/* INICIO */}
       {paso === "inicio" && (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
-          {/* ... mismo contenido de inicio ... */}
           <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
               <ProthesisIcon />
@@ -174,16 +166,20 @@ export default function App() {
         </div>
       )}
 
-      {/* NUEVO: RESUMEN post-login */}
+      {/* ✅ RESUMEN: Siempre se muestra post-login */}
       {paso === "resumen" && token && (
         <RegistroResumen
           cirugias={cirugias}
-          onNuevaCirugia={() => { setDatos({}); setPaso("lugar"); }}
+          onNuevaCirugia={() => { 
+            setDatos({}); 
+            setPaso("lugar"); 
+          }}
           onCompletarEscala={(id, per, art) => { 
             setCirugiaId(id); 
             setPeriodo(per); 
             setPaso("escala"); 
           }}
+          onLogout={handleSalir}
         />
       )}
 
@@ -195,10 +191,11 @@ export default function App() {
         />
       )}
 
+      {/* ✅ Todos los pasos de nueva cirugía van DESDE el resumen */}
       {paso === "lugar" && token && (
         <PasoLugar
           onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
-          onBack={() => setPaso("resumen")}
+          onBack={() => setPaso("resumen")}  {/* ✅ Volver siempre a resumen */}
           inicial={datos}
         />
       )}
@@ -224,7 +221,7 @@ export default function App() {
         <PasoFecha
           token={token}
           datos={datos}
-          onComplete={handleFechaComplete}  // ← CAMBIADO
+          onComplete={handleFechaComplete}
           onBack={() => setPaso("implante")}
         />
       )}
@@ -235,8 +232,8 @@ export default function App() {
           cirugiaId={cirugiaId}
           articulacion={datos.articulacion}
           periodo={periodo}
-          esquema={esquema}  // ← NUEVO: pasa esquema
-          onComplete={() => setPaso("resumen")}
+          esquema={esquema}
+          onComplete={() => setPaso("resumen")}  {/* ✅ Volver siempre a resumen */}
         />
       )}
 
@@ -245,4 +242,4 @@ export default function App() {
       </div>
     </div>
   );
-              }
+      }
