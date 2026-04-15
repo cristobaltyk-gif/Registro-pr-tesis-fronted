@@ -195,7 +195,7 @@ export default function App() {
       {paso === "lugar" && token && (
         <PasoLugar
           onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
-          onBack={() => setPaso("resumen")}  {
+          onBack={() => setPaso("resumen")} 
           inicial={datos}
         />
       )}
@@ -233,7 +233,7 @@ export default function App() {
           articulacion={datos.articulacion}
           periodo={periodo}
           esquema={esquema}
-          onComplete={() => setPaso("resumen")}  {/* ✅ Volver siempre a resumen */}
+          onComplete={() => setPaso("resumen")}  
         />
       )}
 
