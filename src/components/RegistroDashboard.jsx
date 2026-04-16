@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-// Importamos el mapa. Asegúrate de que el archivo exista en src/components/MapaCuerpoInteractivo.jsx
 import MapaCuerpoInteractivo from "./MapaCuerpoInteractivo.jsx";
-// Estilos originales
 import "../styles/dashboard-pacientes.css";
-// Estilos del mapa
 import "../styles/mapa-cuerpo.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -11,11 +8,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 const PERIODOS_LABEL = { preop: "Preop", "3m": "3m", "6m": "6m", "1a": "1 año", "2a": "2 años" };
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
-// Segmentos que el mapa va a reconocer
+// Definimos los segmentos válidos (Sólo Cadera y Rodilla, como pediste)
 const SEGMENTOS_VALIDOS = [
   "cadera-derecha", "cadera-izquierda",
   "rodilla-derecha", "rodilla-izquierda",
-  "hombro-derecho", "hombro-izquierdo"
 ];
 
 export default function RegistroDashboardMapa({ token, onNuevaCirugia, onCompletarEscala }) {
@@ -38,7 +34,7 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
     finally { setLoading(false); }
   }
 
-  // Lógica de progreso y pendientes
+  // Lógica de progreso y pendientes (Mantenida)
   function getPendientes(c) {
     const ep = c.escalas_programadas || {};
     return PERIODOS_ORDEN.filter(p => ep[p]?.programada !== false && !ep[p]?.completada);
@@ -58,12 +54,20 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
     } catch { return iso; }
   }
 
-  // Mapeamos los datos de la API al mapa interactivo
+  // --- NUEVA LÓGICA DE MAPEO (CASE-INSENSITIVE) ---
+  // Procesamos las cirugías para crear un mapa indexado por segmento (ej: "cadera-derecha")
   const mapaProtesis = useMemo(() => {
     const mapa = {};
+    if (!cirugias) return mapa;
+
     cirugias.forEach(c => {
-      // Normalización: la API debe retornar 'tipo_protesis' y 'lado' correctos
-      const key = `${c.tipo_protesis.toLowerCase()}-${c.lado.toLowerCase()}`;
+      // Normalización agresiva: todo a minúsculas y sin espacios extras
+      const tipo = c.tipo_protesis?.toString().trim().toLowerCase() || "";
+      const lado = c.lado?.toString().trim().toLowerCase() || "";
+      
+      const key = `${tipo}-${lado}`; // Genera "cadera-derecha"
+      
+      // Si la clave coincide con SEGMENTOS_VALIDOS, la guardamos
       if (SEGMENTOS_VALIDOS.includes(key)) {
         mapa[key] = c;
       }
@@ -102,7 +106,7 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
           />
         </div>
 
-        {/* COLUMNA DERECHA: DETALLES Y ACCIONES */}
+        {/* COLUMNA DERECHA: DETALLES Y ACCIONES (Tu panel original) */}
         <div className="dp-details-pane">
           {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
 
@@ -190,7 +194,7 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
                   <div className="dp-success">✅ Todas las evaluaciones completadas — ¡Gracias!</div>
                 )}
 
-                {/* Botón para Revisión */}
+                {/* Botón para Prótesis de Revisión */}
                 <button className="dp-btn-secondary full-width" style={{marginTop: '15px'}} onClick={() => onNuevaCirugia(segmentoSeleccionado, 'revision')}>
                   Registrar Cirugía de Revisión
                 </button>
