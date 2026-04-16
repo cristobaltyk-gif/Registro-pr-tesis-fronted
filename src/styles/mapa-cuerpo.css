@@ -1,104 +1,61 @@
-/* Layout de dos columnas */
-.layout-mapa {
-  max-width: 1200px; /* Más ancho para el mapa */
-}
-
-.dp-content-panes {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-.dp-map-pane {
-  flex: 1; /* El mapa toma una parte */
-  position: sticky;
-  top: 20px;
-}
-
-.dp-details-pane {
-  flex: 1.5; /* Los detalles toman un poco más */
-}
-
-/* Estilos para el SVG */
+/* src/styles/mapa-cuerpo.css */
 .contenedor-svg-mapa {
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px;
+  background: #f8fafc;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  display: flex;
+  justify-content: center;
 }
 
 .svg-cuerpo {
   width: 100%;
   height: auto;
-  max-height: 80vh;
+  transition: all 0.3s ease;
 }
 
 /* Estilos de los puntos interactivos */
-.punto-articulacion .punto-visual {
+.punto-visual-exterior {
   fill: #fff;
-  stroke: #64748b; /* Color por defecto (vacío) */
+  stroke: #cbd5e1;
   stroke-width: 2;
   transition: all 0.2s ease;
 }
 
-.punto-articulacion:hover .punto-visual {
+.punto-visual-interior {
+  fill: #64748b;
+  transition: all 0.2s ease;
+}
+
+/* Estado: Hover */
+.g-punto:hover .punto-visual-exterior {
   stroke: #0f172a;
   stroke-width: 3;
 }
 
-/* Punto con prótesis activa */
-.punto-articulacion.con-protesis .punto-visual {
-  fill: #22c55e; /* Verde clínico */
+/* Estado: Con Prótesis (Verde clínico) */
+.g-punto.con-protesis .punto-visual-exterior {
+  fill: #22c55e;
   stroke: #166534;
 }
 
-/* Punto seleccionado actualmente */
-.punto-articulacion.seleccionado .punto-visual {
-  stroke: #2563eb; /* Azul selección */
+.g-punto.con-protesis .punto-visual-interior {
+  fill: #ffffff;
+}
+
+/* Estado: Seleccionado actualmente (Azul) */
+.g-punto.seleccionado .punto-visual-exterior {
+  fill: #2563eb;
+  stroke: #1d4ed8;
   stroke-width: 4;
-  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.5));
 }
 
-/* Estilos para el header de la tarjeta de detalle */
-.dp-card-header-map {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 10px;
+.g-punto.seleccionado .punto-visual-interior {
+  fill: #ffffff;
 }
 
-.dp-card-header-map h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.dot-indicador {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.dot-indicador.vacio {
-  background: #fff;
-  border: 2px solid #64748b;
-}
-
-.dot-indicador.activo {
-  background: #22c55e;
-  border: 2px solid #166534;
-}
-
-/* Utilidades */
-.full-width {
-  width: 100%;
-}
-
-.dp-empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #64748b;
+.punto-label {
+  pointer-events: none; /* No interfiere con el clic */
+  transition: all 0.2s ease;
 }
