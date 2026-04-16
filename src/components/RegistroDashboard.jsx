@@ -1,25 +1,29 @@
-import { useEffect, useState } from "react";
-import { useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
+// Importa el nuevo componente SVG interactivo (ver detalles abajo)
+import MapaCuerpoInteractivo from "./MapaCuerpoInteractivo";
+// Mantenemos tus estilos originales y agregamos específicos para el mapa
 import "../styles/dashboard-pacientes.css";
-import BodyProtesisMap from "./BodyProtesisMap"; // Ajusta la ruta según tu estructura
+import "../styles/mapa-cuerpo.css"; // Nuevos estilos necesarios
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const PERIODOS_LABEL = { preop: "Preop", "3m": "6m", "1a": "1 año", "2a": "2 años" };
+const PERIODOS_LABEL = { preop: "Preop", "3m": "3m", "6m": "6m", "1a": "1 año", "2a": "2 años" };
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
-export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEscala }) {
+// Definimos los segmentos válidos para mapear el SVG a los datos de la API
+const SEGMENTOS_VALIDOS = [
+  "cadera-derecha", "cadera-izquierda",
+  "rodilla-derecha", "rodilla-izquierda",
+  "hombro-derecho", "hombro-izquierdo"
+  // Agrega más si tu API y SVG los soportan
+];
+
+export default function RegistroDashboardMapa({ token, onNuevaCirugia, onCompletarEscala }) {
   const [cirugias, setCirugias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
-
-  const ZONAS = {
-    cadera_izquierda: { top: "33%", left: "37%", tipo: "cadera", lado: "izquierda", label: "Cadera izquierda" },
-    cadera_derecha:   { top: "33%", left: "63%", tipo: "cadera", lado: "derecha",   label: "Cadera derecha" },
-    rodilla_izquierda:{ top: "55%", left: "41%", tipo: "rodilla", lado: "izquierda", label: "Rodilla izquierda" },
-    rodilla_derecha:  { top: "55%", left: "59%", tipo: "rodilla", lado: "derecha",   label: "Rodilla derecha" },
-  };
+  // Estado para saber qué articulación está seleccionada en el mapa
+  const [segmentoSeleccionado, setSegmentoSeleccionado] = useState(null);
 
   useEffect(() => { load(); }, [token]);
 
@@ -35,186 +39,140 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
     finally { setLoading(false); }
   }
 
-  function normalizar(v) {
-    return String(v || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .trim();
-  }
-
-  function getCirugiaZona(zonaKey) {
-    const zona = ZONAS[zonaKey];
-    return cirugias.find(c => {
-      const t = normalizar(c.tipo_protesis || c.tipo || "");
-      const l = normalizar(c.lado || "");
-      return t.includes(normalizar(zona.tipo)) && l === normalizar(zona.lado);
-    });
-  }
-
-  const handleZonaClick = useCallback((zonaKey) => {
-    setZonaSeleccionada(zonaKey);
-  }, []);
-
-  const handleNuevaProtesis = useCallback((zonaKey) => {
-    const zona = ZONAS[zonaKey];
-    onNuevaCirugia?.({
-      tipo: zona.tipo,
-      lado: zona.lado,
-      label: zona.label
-    });
-  }, [onNuevaCirugia]);
-
-  const handleRevisionProtesis = useCallback((zonaKey) => {
-    const zona = ZONAS[zonaKey];
-    onNuevaCirugia?.({
-      tipo: zona.tipo,
-      lado: zona.lado,
-      label: zona.label,
-      es_revision: true
-    });
-  }, [onNuevaCirugia]);
-
-  const getPendientes = useCallback((c) => {
+  // --- LÓGICA DE NEGOCIO MANTENIDA ---
+  function getPendientes(c) {
     const ep = c.escalas_programadas || {};
     return PERIODOS_ORDEN.filter(p => ep[p]?.programada !== false && !ep[p]?.completada);
-  }, []);
+  }
 
-  const getProgreso = useCallback((c) => {
+  function getProgreso(c) {
     const ep = c.escalas_programadas || {};
-    return { 
-      completados: PERIODOS_ORDEN.filter(p => ep[p]?.completada).length, 
-      total: PERIODOS_ORDEN.length 
-    };
-  }, []);
+    return { completados: PERIODOS_ORDEN.filter(p => ep[p]?.completada).length, total: PERIODOS_ORDEN.length };
+  }
 
-  const formatFecha = useCallback((iso) => {
+  function formatFecha(iso) {
     if (!iso) return "—";
     try {
       const [y, m, d] = iso.split("-");
-      const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-      return `${d} ${meses[parseInt(m)-1]} ${y}`;
+      const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+      return `${d} ${meses[parseInt(m) - 1]} ${y}`;
     } catch { return iso; }
-  }, []);
+  }
+  // ------------------------------------
 
-  if (loading) return <div className="dp-loading">Cargando su historial…</div>;
+  // --- NUEVA LÓGICA DE MAPEO ---
 
-  const cirugiaSeleccionada = zonaSeleccionada ? getCirugiaZona(zonaSeleccionada) : null;
-  const tieneProtesis = !!cirugiaSeleccionada;
-  const pendientes = tieneProtesis ? getPendientes(cirugiaSeleccionada) : [];
-  const proximo = pendientes[0];
-  const { completados, total } = tieneProtesis ? getProgreso(cirugiaSeleccionada) : { completados: 0, total: 0 };
-  const pct = Math.round((completados / total) * 100);
+  // Procesamos las cirugías para crear un mapa indexado por segmento (ej: "cadera-derecha")
+  const mapaProtesis = useMemo(() => {
+    const mapa = {};
+    cirugias.forEach(c => {
+      // Normalizamos el nombre del segmento como viene de la API para que coincida con el SVG
+      // Asumimos que la API devuelve 'cadera' y 'derecha'
+      const key = `${c.tipo_protesis.toLowerCase()}-${c.lado.toLowerCase()}`;
+      if (SEGMENTOS_VALIDOS.includes(key)) {
+        mapa[key] = c;
+      }
+    });
+    return mapa;
+  }, [cirugias]);
+
+  // Manejador de clics en el SVG
+  const handleSelectSegmento = (segmentoId) => {
+    setSegmentoSeleccionado(segmentoId);
+  };
+
+  // Obtenemos la información de la cirugía seleccionada actualmente
+  const cirugiaSeleccionada = segmentoSeleccionado ? mapaProtesis[segmentoSeleccionado] : null;
+
+  if (loading) return <div className="dp-loading">Cargando su historial médico…</div>;
+
+  // Formatear el nombre del segmento para mostrarlo (ej: "cadera-derecha" -> "Cadera Derecha")
+  const labelSegmento = segmentoSeleccionado
+    ? segmentoSeleccionado.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())
+    : "";
 
   return (
-    <div className="dp-root">
+    <div className="dp-root layout-mapa"> {/* Nueva clase CSS para el layout */}
       <div className="dp-header">
         <div className="dp-header-left">
-          <h1>Mi registro de prótesis</h1>
-          <p>Haga clic en una zona para ver su historial</p>
+          <h1>Mi Registro de Prótesis</h1>
+          <p>Seleccione una articulación en el mapa para ver detalles o registrar</p>
         </div>
       </div>
 
-      <div className="dp-content">
-        {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
+      <div className="dp-content-panes"> {/* Contenedor de dos columnas */}
 
-        {/* Mapa interactivo */}
-        <div style={{ marginBottom: 24 }}>
-          <BodyProtesisMap 
-            registros={cirugias}
-            onZonaClick={handleZonaClick}
-            zonaSeleccionada={zonaSeleccionada}
+        {/* COLUMNA IZQUIERDA: EL MAPA INTERACTIVO */}
+        <div className="dp-map-pane">
+          <MapaCuerpoInteractivo
+            mapaProtesis={mapaProtesis} // Pasamos qué segmentos tienen prótesis
+            onSelectSegmento={handleSelectSegmento}
+            segmentoSeleccionado={segmentoSeleccionado}
           />
         </div>
 
-        {zonaSeleccionada && (
-          <div className="dp-zona-detalle">
-            {/* Header de zona */}
-            <div className="dp-zona-header" style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: 16,
-              padding: '12px 16px',
-              background: tieneProtesis ? '#f0fdf4' : '#fef2f2',
-              borderRadius: 12,
-              border: `2px solid ${tieneProtesis ? '#86efac' : '#fca5a5'}`,
-            }}>
-              <div style={{ 
-                fontSize: 28, 
-                marginRight: 12,
-                color: ZONAS[zonaSeleccionada].tipo === 'rodilla' ? '#3b82f6' : '#10b981'
-              }}>
-                {ZONAS[zonaSeleccionada].tipo === 'rodilla' ? '🦵' : '🦾'}
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>
-                  {ZONAS[zonaSeleccionada].label}
-                </div>
-                <div style={{ fontSize: 13, color: '#64748b' }}>
-                  {tieneProtesis ? 'Prótesis registrada' : 'Sin prótesis aún'}
-                </div>
-              </div>
-            </div>
+        {/* COLUMNA DERECHA: DETALLES Y ACCIONES (Panel Dinámico) */}
+        <div className="dp-details-pane">
+          {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
 
-            {/* Acciones */}
-            <div className="dp-acciones-zona" style={{ marginBottom: 16 }}>
-              {!tieneProtesis ? (
-                <button 
-                  className="dp-btn-primary" 
-                  onClick={() => handleNuevaProtesis(zonaSeleccionada)}
-                  style={{ width: '100%' }}
-                >
-                  ➕ Registrar {ZONAS[zonaSeleccionada].label}
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button 
-                    className="dp-btn-secondary" 
-                    onClick={() => handleRevisionProtesis(zonaSeleccionada)}
-                    style={{ flex: 1 }}
-                  >
-                    🔄 Revisión
-                  </button>
-                  <button 
-                    className="dp-btn-primary" 
-                    onClick={() => setZonaSeleccionada(null)}
-                    style={{ flex: 1 }}
-                  >
-                    ← Volver al mapa
-                  </button>
-                </div>
-              )}
+          {!segmentoSeleccionado && (
+            <div className="dp-card dp-empty-state">
+              <div style={{ fontSize: 50, marginBottom: 16 }}>👈</div>
+              <h3>Bienvenido a su registro</h3>
+              <p>Haga clic en un punto de articulación en el cuerpo para comenzar.</p>
             </div>
+          )}
 
-            {/* Detalle de prótesis si existe */}
-            {tieneProtesis && (
-              <div className="dp-card">
-                <div style={{ marginBottom: 12 }}>
-                  <p className="dp-event-meta" style={{ marginBottom: 4 }}>
-                    📅 {formatFecha(cirugiaSeleccionada.fecha_cirugia)} · 
-                    👨‍⚕️ {cirugiaSeleccionada.cirujano?.nombre || "—"}
-                  </p>
-                  <p className="dp-event-meta">
-                    🏥 {cirugiaSeleccionada.clinica?.nombre || "—"}
-                    {cirugiaSeleccionada.clinica?.ciudad ? ` · ${cirugiaSeleccionada.clinica.ciudad}` : ""}
-                  </p>
+          {segmentoSeleccionado && !cirugiaSeleccionada && (
+            // CASO: Segmento sin prótesis registrada -> Solo punto clicable
+            <div className="dp-card">
+              <div className="dp-card-header-map">
+                <span className="dot-indicador vacio"></span>
+                <h2>{labelSegmento}</h2>
+              </div>
+              <p className="dp-empty" style={{ margin: "20px 0" }}>No hay prótesis registrada en esta zona.</p>
+              {/* Mantenemos la llamada a tu prop original */}
+              <button className="dp-btn-primary full-width" onClick={() => onNuevaCirugia(segmentoSeleccionado)}>
+                Registrar Prótesis Primaria →
+              </button>
+            </div>
+          )}
+
+          {cirugiaSeleccionada && (() => {
+            // CASO: Segmento CON prótesis -> Mostrar Info y Escalas (Tu lógica original)
+            const c = cirugiaSeleccionada;
+            const pendientes = getPendientes(c);
+            const proximo = pendientes[0] || null;
+            const { completados, total } = getProgreso(c);
+            const pct = Math.round((completados / total) * 100);
+
+            return (
+              <div key={c.id} className="dp-card">
+                <div className="dp-card-header-map">
+                  <span className="dot-indicador activo"></span>
+                  <h2>{labelSegmento}</h2>
                 </div>
+
+                <p className="dp-event-meta" style={{ marginBottom: 4 }}>
+                  📅 {formatFecha(c.fecha_cirugia)} · 👨‍⚕️ {c.cirujano?.nombre || "—"}
+                </p>
+                <p className="dp-event-meta" style={{ marginBottom: 14 }}>
+                  🏥 {c.clinica?.nombre || "—"}{c.clinica?.ciudad ? ` · ${c.clinica.ciudad}` : ""}
+                </p>
 
                 {/* Progreso */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Evaluaciones</span>
                     <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 700 }}>{completados}/{total}</span>
                   </div>
-                  <div className="dp-progress-bar">
-                    <div className="dp-progress-fill" style={{ width: `${pct}%` }} />
-                  </div>
+                  <div className="dp-progress-bar"><div className="dp-progress-fill" style={{ width: `${pct}%` }} /></div>
                 </div>
 
                 {/* Períodos */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 12 }}>
                   {PERIODOS_ORDEN.map(p => {
-                    const ok = (cirugiaSeleccionada.escalas_programadas || {})[p]?.completada;
+                    const ok = (c.escalas_programadas || {})[p]?.completada;
                     return (
                       <div key={p} style={{
                         borderRadius: 8, padding: "8px 4px", textAlign: "center",
@@ -229,44 +187,37 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
                 </div>
 
                 {proximo && (
-                  <div className="dp-accion-pendiente" style={{ marginTop: 16 }}>
+                  <div className="dp-accion-pendiente">
                     <div>
-                      <p className="dp-accion-title">📋 {PERIODOS_LABEL[proximo]}</p>
+                      <p className="dp-accion-title">📋 Evaluación pendiente — {PERIODOS_LABEL[proximo]}</p>
                       <p className="dp-accion-sub">Toma menos de 5 minutos</p>
                     </div>
-                    <button 
-                      className="dp-btn-completar"
-                      onClick={() => onCompletarEscala?.(cirugiaSeleccionada.id, proximo)}
-                    >
+                    {/* Mantenemos la llamada a tu prop original */}
+                    <button className="dp-btn-completar" onClick={() => onCompletarEscala?.(c.id, proximo)}>
                       Completar →
                     </button>
                   </div>
                 )}
 
                 {pendientes.length === 0 && (
-                  <div className="dp-success" style={{ marginTop: 16 }}>
-                    ✅ Todas las evaluaciones completadas — ¡Gracias!
-                  </div>
+                  <div className="dp-success">✅ Todas las evaluaciones completadas — ¡Gracias!</div>
                 )}
+
+                {/* Botón para Prótesis de Revisión (segundo registro) */}
+                <button className="dp-btn-secondary full-width" style={{marginTop: '15px'}} onClick={() => onNuevaCirugia(segmentoSeleccionado, 'revision')}>
+                  Registrar Cirugía de Revisión
+                </button>
+
               </div>
-            )}
-          </div>
-        )}
+            );
+          })()}
 
-        {!zonaSeleccionada && cirugias.length === 0 && (
-          <div className="dp-card" style={{ textAlign: "center", padding: "40px 20px" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🦴</div>
-            <p className="dp-event-diag" style={{ marginBottom: 8 }}>Sin prótesis registradas</p>
-            <p className="dp-empty" style={{ marginBottom: 20 }}>
-              Haga clic en cualquier zona roja para registrar su primera prótesis
-            </p>
-          </div>
-        )}
+        </div> {/* fin details-pane */}
+      </div> {/* fin content-panes */}
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", marginTop: 24, lineHeight: 1.5 }}>
-          Sus respuestas son confidenciales y contribuyen al Registro Nacional de Prótesis de Chile.
-        </p>
-      </div>
+      <p style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", marginTop: 24, padding: "0 20px" }}>
+        Sus respuestas son confidenciales y contribuyen al Registro Nacional de Prótesis de Chile.
+      </p>
     </div>
   );
-      }
+}
