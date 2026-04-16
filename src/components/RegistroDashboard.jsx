@@ -1,28 +1,27 @@
 import { useEffect, useState, useMemo } from "react";
-// Importa el nuevo componente SVG interactivo (ver detalles abajo)
-import MapaCuerpoInteractivo from "./MapaCuerpoInteractivo";
-// Mantenemos tus estilos originales y agregamos específicos para el mapa
+// Importamos el mapa. Asegúrate de que el archivo exista en src/components/MapaCuerpoInteractivo.jsx
+import MapaCuerpoInteractivo from "./MapaCuerpoInteractivo.jsx";
+// Estilos originales
 import "../styles/dashboard-pacientes.css";
-import "../styles/mapa-cuerpo.css"; // Nuevos estilos necesarios
+// Estilos del mapa
+import "../styles/mapa-cuerpo.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const PERIODOS_LABEL = { preop: "Preop", "3m": "3m", "6m": "6m", "1a": "1 año", "2a": "2 años" };
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
-// Definimos los segmentos válidos para mapear el SVG a los datos de la API
+// Segmentos que el mapa va a reconocer
 const SEGMENTOS_VALIDOS = [
   "cadera-derecha", "cadera-izquierda",
   "rodilla-derecha", "rodilla-izquierda",
   "hombro-derecho", "hombro-izquierdo"
-  // Agrega más si tu API y SVG los soportan
 ];
 
 export default function RegistroDashboardMapa({ token, onNuevaCirugia, onCompletarEscala }) {
   const [cirugias, setCirugias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Estado para saber qué articulación está seleccionada en el mapa
   const [segmentoSeleccionado, setSegmentoSeleccionado] = useState(null);
 
   useEffect(() => { load(); }, [token]);
@@ -39,7 +38,7 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
     finally { setLoading(false); }
   }
 
-  // --- LÓGICA DE NEGOCIO MANTENIDA ---
+  // Lógica de progreso y pendientes
   function getPendientes(c) {
     const ep = c.escalas_programadas || {};
     return PERIODOS_ORDEN.filter(p => ep[p]?.programada !== false && !ep[p]?.completada);
@@ -58,16 +57,12 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
       return `${d} ${meses[parseInt(m) - 1]} ${y}`;
     } catch { return iso; }
   }
-  // ------------------------------------
 
-  // --- NUEVA LÓGICA DE MAPEO ---
-
-  // Procesamos las cirugías para crear un mapa indexado por segmento (ej: "cadera-derecha")
+  // Mapeamos los datos de la API al mapa interactivo
   const mapaProtesis = useMemo(() => {
     const mapa = {};
     cirugias.forEach(c => {
-      // Normalizamos el nombre del segmento como viene de la API para que coincida con el SVG
-      // Asumimos que la API devuelve 'cadera' y 'derecha'
+      // Normalización: la API debe retornar 'tipo_protesis' y 'lado' correctos
       const key = `${c.tipo_protesis.toLowerCase()}-${c.lado.toLowerCase()}`;
       if (SEGMENTOS_VALIDOS.includes(key)) {
         mapa[key] = c;
@@ -76,23 +71,20 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
     return mapa;
   }, [cirugias]);
 
-  // Manejador de clics en el SVG
   const handleSelectSegmento = (segmentoId) => {
     setSegmentoSeleccionado(segmentoId);
   };
 
-  // Obtenemos la información de la cirugía seleccionada actualmente
   const cirugiaSeleccionada = segmentoSeleccionado ? mapaProtesis[segmentoSeleccionado] : null;
 
   if (loading) return <div className="dp-loading">Cargando su historial médico…</div>;
 
-  // Formatear el nombre del segmento para mostrarlo (ej: "cadera-derecha" -> "Cadera Derecha")
   const labelSegmento = segmentoSeleccionado
     ? segmentoSeleccionado.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())
     : "";
 
   return (
-    <div className="dp-root layout-mapa"> {/* Nueva clase CSS para el layout */}
+    <div className="dp-root layout-mapa">
       <div className="dp-header">
         <div className="dp-header-left">
           <h1>Mi Registro de Prótesis</h1>
@@ -100,18 +92,17 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
         </div>
       </div>
 
-      <div className="dp-content-panes"> {/* Contenedor de dos columnas */}
-
+      <div className="dp-content-panes">
         {/* COLUMNA IZQUIERDA: EL MAPA INTERACTIVO */}
         <div className="dp-map-pane">
           <MapaCuerpoInteractivo
-            mapaProtesis={mapaProtesis} // Pasamos qué segmentos tienen prótesis
+            mapaProtesis={mapaProtesis}
             onSelectSegmento={handleSelectSegmento}
             segmentoSeleccionado={segmentoSeleccionado}
           />
         </div>
 
-        {/* COLUMNA DERECHA: DETALLES Y ACCIONES (Panel Dinámico) */}
+        {/* COLUMNA DERECHA: DETALLES Y ACCIONES */}
         <div className="dp-details-pane">
           {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
 
@@ -124,22 +115,19 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
           )}
 
           {segmentoSeleccionado && !cirugiaSeleccionada && (
-            // CASO: Segmento sin prótesis registrada -> Solo punto clicable
             <div className="dp-card">
               <div className="dp-card-header-map">
                 <span className="dot-indicador vacio"></span>
                 <h2>{labelSegmento}</h2>
               </div>
               <p className="dp-empty" style={{ margin: "20px 0" }}>No hay prótesis registrada en esta zona.</p>
-              {/* Mantenemos la llamada a tu prop original */}
-              <button className="dp-btn-primary full-width" onClick={() => onNuevaCirugia(segmentoSeleccionado)}>
+              <button className="dp-btn-primary full-width" onClick={() => onNuevaCirugia(segmentoSeleccionado, 'primaria')}>
                 Registrar Prótesis Primaria →
               </button>
             </div>
           )}
 
           {cirugiaSeleccionada && (() => {
-            // CASO: Segmento CON prótesis -> Mostrar Info y Escalas (Tu lógica original)
             const c = cirugiaSeleccionada;
             const pendientes = getPendientes(c);
             const proximo = pendientes[0] || null;
@@ -192,7 +180,6 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
                       <p className="dp-accion-title">📋 Evaluación pendiente — {PERIODOS_LABEL[proximo]}</p>
                       <p className="dp-accion-sub">Toma menos de 5 minutos</p>
                     </div>
-                    {/* Mantenemos la llamada a tu prop original */}
                     <button className="dp-btn-completar" onClick={() => onCompletarEscala?.(c.id, proximo)}>
                       Completar →
                     </button>
@@ -203,17 +190,15 @@ export default function RegistroDashboardMapa({ token, onNuevaCirugia, onComplet
                   <div className="dp-success">✅ Todas las evaluaciones completadas — ¡Gracias!</div>
                 )}
 
-                {/* Botón para Prótesis de Revisión (segundo registro) */}
+                {/* Botón para Revisión */}
                 <button className="dp-btn-secondary full-width" style={{marginTop: '15px'}} onClick={() => onNuevaCirugia(segmentoSeleccionado, 'revision')}>
                   Registrar Cirugía de Revisión
                 </button>
-
               </div>
             );
           })()}
-
-        </div> {/* fin details-pane */}
-      </div> {/* fin content-panes */}
+        </div>
+      </div>
 
       <p style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", marginTop: 24, padding: "0 20px" }}>
         Sus respuestas son confidenciales y contribuyen al Registro Nacional de Prótesis de Chile.
