@@ -1,12 +1,14 @@
 import { useState } from "react";
 import "../styles/dashboard-pacientes.css";
 
+// Oxford Knee Score — IDs calzan con backend: routers/registro_escalas.py → ESCALAS["oxford_knee"]
+
 const PREGUNTAS = [
   {
-    id: 1,
+    id: "dolor_general",
     texto: "¿Cómo describiría el dolor habitual de su rodilla?",
     opciones: [
-      { valor: 4, label: "Ninguno" },
+      { valor: 4, label: "Sin dolor" },
       { valor: 3, label: "Muy leve" },
       { valor: 2, label: "Leve" },
       { valor: 1, label: "Moderado" },
@@ -14,74 +16,74 @@ const PREGUNTAS = [
     ],
   },
   {
-    id: 2,
-    texto: "¿Ha tenido dificultad para lavarse y secarse (todo el cuerpo) a causa de su rodilla?",
+    id: "higiene",
+    texto: "¿Tiene dificultad para lavarse y secarse?",
     opciones: [
-      { valor: 4, label: "Sin dificultad" },
-      { valor: 3, label: "Poca dificultad" },
-      { valor: 2, label: "Dificultad moderada" },
-      { valor: 1, label: "Mucha dificultad" },
-      { valor: 0, label: "Imposible" },
+      { valor: 4, label: "Ninguna" },
+      { valor: 3, label: "Muy poca" },
+      { valor: 2, label: "Moderada" },
+      { valor: 1, label: "Mucha" },
+      { valor: 0, label: "Incapaz de hacerlo" },
     ],
   },
   {
-    id: 3,
-    texto: "¿Ha tenido dificultad para entrar y salir de un auto a causa de su rodilla?",
+    id: "transporte",
+    texto: "¿Tiene dificultad para entrar/salir de un auto?",
     opciones: [
-      { valor: 4, label: "Sin dificultad" },
-      { valor: 3, label: "Poca dificultad" },
-      { valor: 2, label: "Dificultad moderada" },
-      { valor: 1, label: "Mucha dificultad" },
-      { valor: 0, label: "Imposible" },
+      { valor: 4, label: "Ninguna" },
+      { valor: 3, label: "Muy poca" },
+      { valor: 2, label: "Moderada" },
+      { valor: 1, label: "Mucha" },
+      { valor: 0, label: "Incapaz" },
     ],
   },
   {
-    id: 4,
-    texto: "¿Cuánto tiempo puede caminar antes de que el dolor de su rodilla sea intenso?",
+    id: "distancia_marcha",
+    texto: "¿Cuánto puede caminar antes de que el dolor sea intenso?",
     opciones: [
-      { valor: 4, label: "Sin dolor / más de 30 minutos" },
-      { valor: 3, label: "16 a 30 minutos" },
-      { valor: 2, label: "5 a 15 minutos" },
-      { valor: 1, label: "Solo por casa" },
+      { valor: 4, label: "Sin dolor al caminar" },
+      { valor: 3, label: "Más de 30 minutos" },
+      { valor: 2, label: "Entre 10 y 30 minutos" },
+      { valor: 1, label: "Solo unos minutos" },
       { valor: 0, label: "No puedo caminar" },
     ],
   },
   {
-    id: 5,
-    texto: "Después de una comida, ¿cuánta dificultad tiene para levantarse de una silla a causa de su rodilla?",
+    id: "sentado_levantarse",
+    texto: "¿Tiene dolor al levantarse de una silla?",
     opciones: [
-      { valor: 4, label: "Sin dificultad" },
-      { valor: 3, label: "Poca dificultad" },
-      { valor: 2, label: "Dificultad moderada" },
-      { valor: 1, label: "Mucha dificultad" },
-      { valor: 0, label: "Imposible" },
+      { valor: 4, label: "Sin dolor" },
+      { valor: 3, label: "Muy leve" },
+      { valor: 2, label: "Leve" },
+      { valor: 1, label: "Moderado" },
+      { valor: 0, label: "Intenso" },
     ],
   },
   {
-    id: 6,
-    texto: "¿Ha coxeado (cojead) al caminar a causa de su rodilla?",
+    id: "cojera",
+    texto: "¿Cojea al caminar?",
     opciones: [
-      { valor: 4, label: "Raramente / nunca" },
-      { valor: 3, label: "A veces o solo al principio" },
-      { valor: 2, label: "A menudo, no solo al principio" },
-      { valor: 1, label: "La mayor parte del tiempo" },
-      { valor: 0, label: "Siempre" },
+      { valor: 4, label: "Nunca o raramente" },
+      { valor: 3, label: "A veces o solo al inicio" },
+      { valor: 2, label: "A menudo, no solo al inicio" },
+      { valor: 1, label: "La mayoría del tiempo" },
+      { valor: 0, label: "Todo el tiempo" },
     ],
   },
   {
-    id: 7,
-    texto: "¿Puede arrodillarse y levantarse después?",
+    id: "arrodillarse",
+    texto: "¿Puede arrodillarse y levantarse?",
     opciones: [
       { valor: 4, label: "Sí, sin dificultad" },
       { valor: 3, label: "Con poca dificultad" },
-      { valor: 2, label: "Con dificultad moderada" },
+      { valor: 2, label: "Con moderada dificultad" },
       { valor: 1, label: "Con mucha dificultad" },
       { valor: 0, label: "No puedo" },
     ],
   },
   {
-    id: 8,
-    texto: "¿Ha tenido dolor de rodilla por la noche en la cama?",
+    id: "dolor_noche",
+    texto: "¿Le ha molestado la rodilla por las noches?",
     opciones: [
       { valor: 4, label: "Ninguna noche" },
       { valor: 3, label: "Solo 1 o 2 noches" },
@@ -91,45 +93,45 @@ const PREGUNTAS = [
     ],
   },
   {
-    id: 9,
-    texto: "¿Cuánto ha interferido el dolor de su rodilla en su trabajo habitual (incluidas las tareas del hogar)?",
+    id: "trabajo_doméstico",
+    texto: "¿Qué tan limitado está para hacer actividades domésticas?",
     opciones: [
-      { valor: 4, label: "Nada" },
-      { valor: 3, label: "Un poco" },
-      { valor: 2, label: "Moderadamente" },
-      { valor: 1, label: "Mucho" },
-      { valor: 0, label: "Totalmente" },
+      { valor: 4, label: "Sin limitación" },
+      { valor: 3, label: "Poco limitado" },
+      { valor: 2, label: "Moderadamente limitado" },
+      { valor: 1, label: "Muy limitado" },
+      { valor: 0, label: "Incapaz de hacerlas" },
     ],
   },
   {
-    id: 10,
-    texto: "¿Ha tenido la sensación de que su rodilla puede fallar o doblarse?",
+    id: "confianza",
+    texto: "¿Siente que su rodilla puede fallar o ceder?",
     opciones: [
-      { valor: 4, label: "Raramente / nunca" },
-      { valor: 3, label: "A veces o solo al principio" },
-      { valor: 2, label: "A menudo, no solo al principio" },
-      { valor: 1, label: "La mayor parte del tiempo" },
-      { valor: 0, label: "Siempre" },
+      { valor: 4, label: "Nunca" },
+      { valor: 3, label: "Raramente" },
+      { valor: 2, label: "A veces" },
+      { valor: 1, label: "A menudo" },
+      { valor: 0, label: "Constantemente" },
     ],
   },
   {
-    id: 11,
-    texto: "¿Puede hacer la compra por sí solo?",
+    id: "compras",
+    texto: "¿Puede ir de compras solo?",
     opciones: [
       { valor: 4, label: "Sí, sin dificultad" },
       { valor: 3, label: "Con poca dificultad" },
-      { valor: 2, label: "Con dificultad moderada" },
+      { valor: 2, label: "Con moderada dificultad" },
       { valor: 1, label: "Con mucha dificultad" },
       { valor: 0, label: "No puedo" },
     ],
   },
   {
-    id: 12,
-    texto: "¿Puede bajar un tramo de escaleras?",
+    id: "escaleras",
+    texto: "¿Puede subir un tramo de escaleras?",
     opciones: [
       { valor: 4, label: "Sí, sin dificultad" },
       { valor: 3, label: "Con poca dificultad" },
-      { valor: 2, label: "Con dificultad moderada" },
+      { valor: 2, label: "Con moderada dificultad" },
       { valor: 1, label: "Con mucha dificultad" },
       { valor: 0, label: "No puedo" },
     ],
@@ -137,10 +139,11 @@ const PREGUNTAS = [
 ];
 
 function getInterpretacion(score) {
-  if (score >= 41) return { label: "Excelente",  color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" };
-  if (score >= 34) return { label: "Bueno",       color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" };
-  if (score >= 27) return { label: "Moderado",    color: "#d97706", bg: "#fffbeb", border: "#fde68a" };
-  return                   { label: "Severo",     color: "#dc2626", bg: "#fef2f2", border: "#fecaca" };
+  if (score >= 41) return { label: "Excelente", color: "#16a34a" };
+  if (score >= 34) return { label: "Bueno",     color: "#2563eb" };
+  if (score >= 27) return { label: "Regular",   color: "#d97706" };
+  if (score >= 20) return { label: "Malo",      color: "#dc2626" };
+  return                   { label: "Muy malo", color: "#dc2626" };
 }
 
 export default function EscalaOKS({ onComplete, onBack }) {
@@ -159,12 +162,16 @@ export default function EscalaOKS({ onComplete, onBack }) {
       setTimeout(() => setPreguntaIdx(i => i + 1), 300);
     } else {
       const score = Object.values(nuevas).reduce((a, b) => a + b, 0);
-      onComplete?.({ escala: "OKS", respuestas: nuevas, score, interpretacion: getInterpretacion(score).label });
+      // ← Formato EXACTO que consume RegistroEscalaForm
+      onComplete?.({
+        respuestas: nuevas,
+        score,
+        interpretacion: getInterpretacion(score).label,
+      });
     }
   }
 
-  const score         = Object.values(respuestas).reduce((a, b) => a + b, 0);
-  const interpretacion = getInterpretacion(score);
+  const score = Object.values(respuestas).reduce((a, b) => a + b, 0);
 
   return (
     <div className="dp-root">
@@ -176,8 +183,6 @@ export default function EscalaOKS({ onComplete, onBack }) {
       </div>
 
       <div className="dp-content">
-
-        {/* Barra progreso */}
         <div className="dp-progress-bar" style={{ marginBottom: 20 }}>
           <div className="dp-progress-fill" style={{ width: `${pct}%` }} />
         </div>
@@ -199,7 +204,8 @@ export default function EscalaOKS({ onComplete, onBack }) {
                   background: respuestas[pregunta.id] === op.valor ? "#0f172a" : "#fff",
                   color: respuestas[pregunta.id] === op.valor ? "#fff" : "#0f172a",
                   fontSize: 15, fontWeight: 500,
-                  cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', system-ui, sans-serif",
                   transition: "all 0.15s",
                 }}
               >
@@ -208,16 +214,17 @@ export default function EscalaOKS({ onComplete, onBack }) {
             ))}
           </div>
 
-          {/* Navegación */}
           <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-            <button className="dp-btn-secondary" style={{ width: "auto", padding: "10px 16px" }}
-              onClick={() => preguntaIdx > 0 ? setPreguntaIdx(i => i - 1) : onBack?.()}>
+            <button
+              className="dp-btn-secondary"
+              style={{ width: "auto", padding: "10px 16px" }}
+              onClick={() => preguntaIdx > 0 ? setPreguntaIdx(i => i - 1) : onBack?.()}
+            >
               ← Volver
             </button>
           </div>
         </div>
 
-        {/* Score parcial */}
         {Object.keys(respuestas).length > 0 && (
           <div style={{ textAlign: "center", marginTop: 8 }}>
             <span style={{ fontSize: 12, color: "#94a3b8" }}>
@@ -225,8 +232,7 @@ export default function EscalaOKS({ onComplete, onBack }) {
             </span>
           </div>
         )}
-
       </div>
     </div>
   );
-    }
+}
