@@ -1,24 +1,29 @@
 import { useState, useEffect } from "react";
 import MapaCuerpoInteractivo from "./MapaCuerpoInteractivo";
-import { calcularEscalaPendiente, PERIODO_LABEL } from "../utils/calcularEscalaPendiente";
+import {
+  calcularEscalaPendiente,
+  tipoProtesisASegmento,
+  PERIODO_LABEL
+} from "../utils/calcularEscalaPendiente";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://registro-protesis-backend.onrender.com";
 
 export default function RegistroDashboard({ token, onClickPuntoVacio, onClickProtesis }) {
-  const [cirugias,   setCirugias]   = useState([]);
-  const [cargando,   setCargando]   = useState(true);
-  const [error,      setError]      = useState(null);
+  const [cirugias, setCirugias] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error,    setError]    = useState(null);
 
   useEffect(() => {
     async function cargar() {
       try {
         setCargando(true);
-        const r = await fetch(`${API_BASE}/api/cirugias/mis-cirugias`, {
+        setError(null);
+        const r = await fetch(`${API_BASE}/api/registro/cirugia`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!r.ok) throw new Error("Error al cargar cirugías");
+        if (!r.ok) throw new Error(`Error ${r.status} al cargar cirugías`);
         const data = await r.json();
-        setCirugias(Array.isArray(data) ? data : (data.cirugias || []));
+        setCirugias(Array.isArray(data) ? data : []);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -28,14 +33,13 @@ export default function RegistroDashboard({ token, onClickPuntoVacio, onClickPro
     if (token) cargar();
   }, [token]);
 
-  // Construir mapa { "cadera-derecha": cirugia, ... } para el componente del cuerpo
+  // Construir mapa { "cadera-derecha": cirugia, ... } usando el helper
   const mapaProtesis = {};
   cirugias.forEach(c => {
-    const key = `${c.articulacion}-${c.lado}`;
-    mapaProtesis[key] = c;
+    const seg = tipoProtesisASegmento(c.tipo_protesis, c.lado);
+    if (seg) mapaProtesis[seg] = c;
   });
 
-  // Resumen para el header del dashboard
   const totalProtesis = cirugias.length;
   const pendientes = cirugias.filter(c => calcularEscalaPendiente(c).tipo === "pendiente");
 
@@ -67,24 +71,18 @@ export default function RegistroDashboard({ token, onClickPuntoVacio, onClickPro
         marginBottom: 16,
         textAlign: "center",
       }}>
-        <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>
+        <div style={{ fontSize: 13, color: "#64748b" }}>
           {totalProtesis === 0
             ? "Aún no ha registrado ninguna prótesis"
             : `Tiene ${totalProtesis} prótesis registrada${totalProtesis === 1 ? "" : "s"}`}
         </div>
         {pendientes.length > 0 && (
-          <div style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#dc2626",
-            marginTop: 6,
-          }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", marginTop: 6 }}>
             ⚠ {pendientes.length} evaluación{pendientes.length === 1 ? "" : "es"} pendiente{pendientes.length === 1 ? "" : "s"}
           </div>
         )}
       </div>
 
-      {/* Instrucción */}
       <div style={{
         fontSize: 13,
         color: "#475569",
@@ -97,14 +95,13 @@ export default function RegistroDashboard({ token, onClickPuntoVacio, onClickPro
           : "Toque + para nueva prótesis · Toque la prótesis para evaluación"}
       </div>
 
-      {/* Mapa corporal */}
       <MapaCuerpoInteractivo
         mapaProtesis={mapaProtesis}
         onClickPuntoVacio={onClickPuntoVacio}
         onClickProtesis={onClickProtesis}
       />
 
-      {/* Lista de pendientes (acceso rápido) */}
+      {/* Lista pendientes (acceso rápido) */}
       {pendientes.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>
@@ -132,8 +129,8 @@ export default function RegistroDashboard({ token, onClickPuntoVacio, onClickPro
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", textTransform: "capitalize" }}>
-                    {c.articulacion} {c.lado === "derecha" ? "derecha" : "izquierda"}
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                    {c.tipo_protesis} {c.lado?.toLowerCase()}
                   </div>
                   <div style={{ fontSize: 12, color: "#dc2626", fontWeight: 600, marginTop: 2 }}>
                     Evaluación {estado.label} pendiente
@@ -147,4 +144,4 @@ export default function RegistroDashboard({ token, onClickPuntoVacio, onClickPro
       )}
     </div>
   );
-                }
+      }
