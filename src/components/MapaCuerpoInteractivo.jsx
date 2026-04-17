@@ -11,7 +11,6 @@ const PUNTOS_ARTICULACIONES = [
   { id: "rodilla-izquierda", x: 228, y: 478, label: "Rodilla I" },
 ];
 
-// Prótesis total de cadera realista
 function IconoCadera({ x, y, color = "#2563eb" }) {
   return (
     <g transform={`translate(${x}, ${y})`}>
@@ -23,7 +22,6 @@ function IconoCadera({ x, y, color = "#2563eb" }) {
   );
 }
 
-// Prótesis total de rodilla realista
 function IconoRodilla({ x, y, color = "#2563eb" }) {
   return (
     <g transform={`translate(${x}, ${y})`}>
@@ -38,7 +36,6 @@ function IconoRodilla({ x, y, color = "#2563eb" }) {
   );
 }
 
-// Barra de progreso escalas sobre el punto
 function BarraProgreso({ x, y, cirugia }) {
   const ep = cirugia?.escalas_programadas || {};
   const completados = PERIODOS_ORDEN.filter(p => ep[p]?.completada).length;
@@ -61,7 +58,6 @@ function BarraProgreso({ x, y, cirugia }) {
   );
 }
 
-// Badge "!" cuando hay escala pendiente en ventana actual
 function BadgePendiente({ x, y }) {
   return (
     <g>
@@ -88,7 +84,6 @@ export default function MapaCuerpoInteractivo({
           const tieneProtesis = !!cirugia;
           const esCadera      = punto.id.startsWith("cadera");
 
-          // Estado de escalas pendientes
           const estado = tieneProtesis ? calcularEscalaPendiente(cirugia) : null;
           const tienePendiente = estado?.tipo === "pendiente";
 
@@ -97,25 +92,16 @@ export default function MapaCuerpoInteractivo({
             : "#94a3b8";
 
           function handleClick() {
-            if (tieneProtesis) {
-              onClickProtesis(cirugia);
-            } else {
-              onClickPuntoVacio(punto.id);
-            }
+            if (tieneProtesis) onClickProtesis(cirugia);
+            else               onClickPuntoVacio(punto.id);
           }
 
           return (
-            <g
-              key={punto.id}
-              onClick={handleClick}
-              style={{ cursor: "pointer" }}
-            >
-              {/* Área clic grande */}
+            <g key={punto.id} onClick={handleClick} style={{ cursor: "pointer" }}>
               <circle cx={punto.x} cy={punto.y} r="28" fill="transparent" />
 
               {tieneProtesis ? (
                 <>
-                  {/* Halo pulsante si hay pendiente */}
                   {tienePendiente && (
                     <circle cx={punto.x} cy={punto.y} r="22" fill="none"
                       stroke={colorBase} strokeWidth="2" strokeDasharray="4 3" opacity="0.5">
@@ -124,26 +110,20 @@ export default function MapaCuerpoInteractivo({
                     </circle>
                   )}
 
-                  {/* Fondo círculo prótesis */}
                   <circle cx={punto.x} cy={punto.y} r="17"
                     fill={tienePendiente ? "#fef2f2" : "#eff6ff"}
                     stroke={colorBase} strokeWidth="1.5" />
 
-                  {/* Icono prótesis */}
                   {esCadera
                     ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} />
                     : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} />
                   }
 
-                  {/* Barra progreso escalas */}
                   <BarraProgreso x={punto.x} y={punto.y} cirugia={cirugia} />
-
-                  {/* Badge pendiente */}
                   {tienePendiente && <BadgePendiente x={punto.x} y={punto.y} />}
                 </>
               ) : (
                 <>
-                  {/* Punto vacío — invita a registrar */}
                   <circle cx={punto.x} cy={punto.y} r="12"
                     fill="#fff" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2" />
                   <text x={punto.x} y={punto.y + 1} textAnchor="middle"
@@ -153,7 +133,6 @@ export default function MapaCuerpoInteractivo({
                 </>
               )}
 
-              {/* Label */}
               <text
                 x={punto.x}
                 y={punto.y + (tieneProtesis ? 28 : 22)}
@@ -169,7 +148,6 @@ export default function MapaCuerpoInteractivo({
         })}
       </svg>
 
-      {/* Leyenda */}
       <div style={{
         display: "flex",
         justifyContent: "center",
@@ -181,7 +159,7 @@ export default function MapaCuerpoInteractivo({
       }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#dc2626" }} />
-          Escala pendiente
+          Pendiente
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#2563eb" }} />
@@ -194,4 +172,4 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-}
+          }
