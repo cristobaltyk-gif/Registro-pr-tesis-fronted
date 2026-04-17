@@ -29,7 +29,7 @@ function normalizarLado(lado) {
   return l;
 }
 
-export default function RegistroDashboardMapa({ token, onNuevaCirugia, onCompletarEscala }) {
+export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEscala, onSalir }) {
   const [cirugias,             setCirugias]             = useState([]);
   const [loading,              setLoading]              = useState(true);
   const [error,                setError]                = useState(null);
