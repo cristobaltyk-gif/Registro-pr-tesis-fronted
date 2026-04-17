@@ -4,33 +4,52 @@ import { calcularEscalaPendiente } from "../utils/calcularEscalaPendiente";
 
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
+// Calibradas sobre tu screenshot real:
+// - Caderas a la altura de la ingle/articulación coxofemoral (más arriba que antes)
+// - Caderas más separadas hacia los flancos
+// - Rodillas a la altura de las rótulas reales (no los tobillos)
 const PUNTOS_ARTICULACIONES = [
-  { id: "cadera-derecha",    x: 160, y: 395, label: "Cadera D" },
-  { id: "cadera-izquierda",  x: 240, y: 395, label: "Cadera I" },
-  { id: "rodilla-derecha",   x: 165, y: 535, label: "Rodilla D" },
-  { id: "rodilla-izquierda", x: 235, y: 535, label: "Rodilla I" },
+  { id: "cadera-derecha",    x: 155, y: 320, label: "Cadera D", lado: "derecha"   },
+  { id: "cadera-izquierda",  x: 245, y: 320, label: "Cadera I", lado: "izquierda" },
+  { id: "rodilla-derecha",   x: 165, y: 445, label: "Rodilla D", lado: "derecha"   },
+  { id: "rodilla-izquierda", x: 235, y: 445, label: "Rodilla I", lado: "izquierda" },
 ];
 
-function IconoCadera({ x, y, color = "#2563eb" }) {
+// Prótesis cadera — el vástago femoral va hacia abajo y se inclina hacia el centro
+// Para lado derecho (paciente): vástago se inclina a la izquierda (visto desde frente)
+// Para lado izquierdo (paciente): se invierte (mirror)
+function IconoCadera({ x, y, color = "#2563eb", lado = "derecha" }) {
+  const flip = lado === "izquierda" ? -1 : 1;
   return (
-    <g transform={`translate(${x}, ${y})`}>
+    <g transform={`translate(${x}, ${y}) scale(${flip}, 1)`}>
+      {/* Cotilo acetabular (semicírculo superior) */}
       <path d="M -8,-10 A 8,8 0 0 1 8,-10 L 6,-8 A 6,6 0 0 0 -6,-8 Z" fill={color} />
+      {/* Cabeza femoral esférica */}
       <circle cx="0" cy="-5" r="4.5" fill={color} />
+      {/* Cuello femoral oblicuo (apunta hacia el lateral del cuerpo) */}
       <path d="M -1,-2 L 2,2 L 4,2 L 1,-2 Z" fill={color} />
+      {/* Vástago femoral cónico */}
       <path d="M 1,2 L 5,2 L 3.5,12 L 2.5,12 Z" fill={color} />
     </g>
   );
 }
 
-function IconoRodilla({ x, y, color = "#2563eb" }) {
+// Prótesis rodilla — más simétrica pero el componente femoral tiene cóndilo
+// medial más prominente. Aplicamos mirror sutil para lado izquierdo.
+function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
+  const flip = lado === "izquierda" ? -1 : 1;
   return (
-    <g transform={`translate(${x}, ${y})`}>
+    <g transform={`translate(${x}, ${y}) scale(${flip}, 1)`}>
+      {/* Componente femoral - cóndilos curvos (medial más grande) */}
       <path
-        d="M -7,-10 Q -8,-4 -5,-2 L 5,-2 Q 8,-4 7,-10 Q 5,-11 3,-10 Q 0,-9 -3,-10 Q -5,-11 -7,-10 Z"
+        d="M -7,-10 Q -8,-4 -5,-2 L 5,-2 Q 8,-5 7,-10 Q 5,-11 3,-10 Q 0,-9 -3,-10 Q -5,-11 -7,-10 Z"
         fill={color}
       />
+      {/* Inserto de polietileno */}
       <rect x="-6" y="-1.5" width="12" height="1.5" fill={color} opacity="0.5" />
+      {/* Bandeja tibial */}
       <rect x="-7" y="0.5" width="14" height="3" rx="0.5" fill={color} />
+      {/* Vástago tibial corto */}
       <path d="M -2,3.5 L 2,3.5 L 1.5,11 L -1.5,11 Z" fill={color} />
     </g>
   );
@@ -42,10 +61,8 @@ function BarraProgreso({ x, y, cirugia }) {
   const total = PERIODOS_ORDEN.length;
   const pct = total > 0 ? completados / total : 0;
 
-  const barW = 40;
-  const barH = 5;
-  const barX = x - barW / 2;
-  const barY = y - 32;
+  const barW = 40, barH = 5;
+  const barX = x - barW / 2, barY = y - 32;
 
   return (
     <g>
@@ -62,9 +79,7 @@ function BadgePendiente({ x, y }) {
   return (
     <g>
       <circle cx={x + 12} cy={y - 12} r="7" fill="#dc2626" stroke="#fff" strokeWidth="1.5" />
-      <text x={x + 12} y={y - 9} textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff">
-        !
-      </text>
+      <text x={x + 12} y={y - 9} textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff">!</text>
     </g>
   );
 }
@@ -115,8 +130,8 @@ export default function MapaCuerpoInteractivo({
                     stroke={colorBase} strokeWidth="1.5" />
 
                   {esCadera
-                    ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} />
-                    : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} />
+                    ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
+                    : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
                   }
 
                   <BarraProgreso x={punto.x} y={punto.y} cirugia={cirugia} />
@@ -127,9 +142,7 @@ export default function MapaCuerpoInteractivo({
                   <circle cx={punto.x} cy={punto.y} r="12"
                     fill="#fff" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2" />
                   <text x={punto.x} y={punto.y + 1} textAnchor="middle"
-                    dominantBaseline="middle" fontSize="14" fill="#94a3b8">
-                    +
-                  </text>
+                    dominantBaseline="middle" fontSize="14" fill="#94a3b8">+</text>
                 </>
               )}
 
@@ -149,13 +162,8 @@ export default function MapaCuerpoInteractivo({
       </svg>
 
       <div style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: 16,
-        marginTop: 8,
-        fontSize: 11,
-        color: "#64748b",
-        flexWrap: "wrap",
+        display: "flex", justifyContent: "center", gap: 16,
+        marginTop: 8, fontSize: 11, color: "#64748b", flexWrap: "wrap",
       }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#dc2626" }} />
@@ -172,4 +180,4 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-          }
+}
