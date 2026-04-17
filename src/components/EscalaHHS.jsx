@@ -1,130 +1,115 @@
 import { useState } from "react";
 import "../styles/dashboard-pacientes.css";
 
-// Harris Hip Score — versión auto-reporte paciente
-// Secciones: Dolor (44pts), Función-marcha (33pts), Función-actividad (14pts), Deformidad (4pts), Movilidad (5pts)
-// Esta versión cubre dolor, función y actividad (las que el paciente puede responder)
+// Harris Hip Score — IDs calzan con backend: routers/registro_escalas.py → ESCALAS["harris_hip"]
 
-const SECCIONES = [
+const PREGUNTAS = [
   {
     id: "dolor",
-    titulo: "Dolor",
-    preguntas: [
-      {
-        id: "d1",
-        texto: "¿Cómo describiría el dolor de su cadera?",
-        opciones: [
-          { valor: 44, label: "Ningún dolor" },
-          { valor: 40, label: "Dolor leve, ocasional, no limita actividad" },
-          { valor: 30, label: "Dolor leve al hacer actividad, sin tomar analgésicos" },
-          { valor: 20, label: "Dolor moderado, limita actividad, toma analgésicos ocasionalmente" },
-          { valor: 10, label: "Dolor marcado, limita actividad, toma analgésicos frecuentemente" },
-          { valor: 0,  label: "Dolor incapacitante, encamado" },
-        ],
-      },
+    seccion: "Dolor",
+    texto: "¿Cuánto dolor siente en su cadera operada?",
+    opciones: [
+      { valor: 44, label: "Sin dolor" },
+      { valor: 40, label: "Dolor leve, ocasional, no limita actividades" },
+      { valor: 30, label: "Dolor leve, no necesita analgésicos" },
+      { valor: 20, label: "Dolor moderado, tolerable, con algunos analgésicos" },
+      { valor: 10, label: "Dolor intenso, limita mucho mis actividades" },
+      { valor: 0,  label: "Dolor muy intenso, incapacitante" },
     ],
   },
   {
-    id: "marcha",
-    titulo: "Marcha",
-    preguntas: [
-      {
-        id: "m1",
-        texto: "¿Cómo es su cojera al caminar?",
-        opciones: [
-          { valor: 11, label: "Sin cojera" },
-          { valor: 8,  label: "Cojera leve" },
-          { valor: 5,  label: "Cojera moderada" },
-          { valor: 0,  label: "Cojera intensa o no puede caminar" },
-        ],
-      },
-      {
-        id: "m2",
-        texto: "¿Necesita algún apoyo para caminar?",
-        opciones: [
-          { valor: 11, label: "Ninguno" },
-          { valor: 7,  label: "Bastón en distancias largas" },
-          { valor: 5,  label: "Bastón la mayor parte del tiempo" },
-          { valor: 3,  label: "Una muleta" },
-          { valor: 2,  label: "Dos bastones" },
-          { valor: 0,  label: "Dos muletas o no puede caminar" },
-        ],
-      },
-      {
-        id: "m3",
-        texto: "¿Cuánta distancia puede caminar?",
-        opciones: [
-          { valor: 11, label: "Sin limitación" },
-          { valor: 8,  label: "Más de 6 cuadras" },
-          { valor: 5,  label: "2 a 6 cuadras" },
-          { valor: 2,  label: "Solo por la casa" },
-          { valor: 0,  label: "En cama o silla de ruedas" },
-        ],
-      },
+    id: "distancia_marcha",
+    seccion: "Marcha",
+    texto: "¿Cuánto puede caminar sin detenerse por el dolor?",
+    opciones: [
+      { valor: 11, label: "Sin limitación" },
+      { valor: 8,  label: "Más de 1 km (unas 15 cuadras)" },
+      { valor: 5,  label: "Entre 500 m y 1 km (5-15 cuadras)" },
+      { valor: 2,  label: "Solo en casa" },
+      { valor: 0,  label: "No puedo caminar o solo con andador" },
     ],
   },
   {
-    id: "actividad",
-    titulo: "Actividad",
-    preguntas: [
-      {
-        id: "a1",
-        texto: "¿Puede subir escaleras?",
-        opciones: [
-          { valor: 4, label: "Con normalidad, sin apoyo" },
-          { valor: 2, label: "Con apoyo en el pasamanos" },
-          { valor: 1, label: "Con dificultad" },
-          { valor: 0, label: "No puedo" },
-        ],
-      },
-      {
-        id: "a2",
-        texto: "¿Puede ponerse los calcetines o zapatos?",
-        opciones: [
-          { valor: 4, label: "Con facilidad" },
-          { valor: 2, label: "Con dificultad" },
-          { valor: 0, label: "No puedo" },
-        ],
-      },
-      {
-        id: "a3",
-        texto: "¿Puede sentarse en una silla?",
-        opciones: [
-          { valor: 5, label: "En cualquier silla por más de 1 hora" },
-          { valor: 3, label: "En silla alta por media hora" },
-          { valor: 0, label: "No puedo sentarse cómodamente" },
-        ],
-      },
-      {
-        id: "a4",
-        texto: "¿Puede usar transporte público?",
-        opciones: [
-          { valor: 1, label: "Sí" },
-          { valor: 0, label: "No" },
-        ],
-      },
+    id: "ayuda_marcha",
+    seccion: "Marcha",
+    texto: "¿Usa algún apoyo para caminar?",
+    opciones: [
+      { valor: 11, label: "No necesito ningún apoyo" },
+      { valor: 7,  label: "Un bastón para distancias largas" },
+      { valor: 5,  label: "Un bastón la mayor parte del tiempo" },
+      { valor: 3,  label: "Una muleta" },
+      { valor: 2,  label: "Dos bastones o dos muletas" },
+      { valor: 0,  label: "No puedo caminar ni con apoyo" },
+    ],
+  },
+  {
+    id: "escaleras",
+    seccion: "Actividad",
+    texto: "¿Cómo sube escaleras?",
+    opciones: [
+      { valor: 4, label: "Normal, sin apoyarme en el pasamanos" },
+      { valor: 2, label: "Apoyándome en el pasamanos" },
+      { valor: 1, label: "Con dificultad, de cualquier manera" },
+      { valor: 0, label: "No puedo subir escaleras" },
+    ],
+  },
+  {
+    id: "calzado",
+    seccion: "Actividad",
+    texto: "¿Puede ponerse los zapatos y calcetines?",
+    opciones: [
+      { valor: 4, label: "Sí, sin dificultad" },
+      { valor: 2, label: "Con algo de dificultad" },
+      { valor: 0, label: "No puedo hacerlo solo" },
+    ],
+  },
+  {
+    id: "sentado",
+    seccion: "Actividad",
+    texto: "¿Puede sentarse en una silla por más de una hora?",
+    opciones: [
+      { valor: 5, label: "Sí, en cualquier silla" },
+      { valor: 3, label: "Solo en sillas altas" },
+      { valor: 0, label: "No puedo sentarme cómodamente" },
+    ],
+  },
+  {
+    id: "transporte",
+    seccion: "Actividad",
+    texto: "¿Puede entrar y salir de un auto o transporte público?",
+    opciones: [
+      { valor: 1, label: "Sí, sin dificultad" },
+      { valor: 0, label: "No puedo" },
+    ],
+  },
+  {
+    id: "cojera",
+    seccion: "Marcha",
+    texto: "¿Cojea al caminar?",
+    opciones: [
+      { valor: 11, label: "No cojeo" },
+      { valor: 8,  label: "Levemente" },
+      { valor: 5,  label: "Moderadamente" },
+      { valor: 0,  label: "Cojera severa" },
     ],
   },
 ];
 
 function getInterpretacion(score) {
   if (score >= 90) return { label: "Excelente", color: "#16a34a" };
-  if (score >= 80) return { label: "Bueno",      color: "#2563eb" };
-  if (score >= 70) return { label: "Regular",    color: "#d97706" };
-  return                   { label: "Malo",      color: "#dc2626" };
+  if (score >= 80) return { label: "Bueno",     color: "#2563eb" };
+  if (score >= 70) return { label: "Regular",   color: "#d97706" };
+  return                   { label: "Malo",     color: "#dc2626" };
 }
 
 export default function EscalaHHS({ onComplete, onBack }) {
-  // Aplanar todas las preguntas
-  const todasPreguntas = SECCIONES.flatMap(s => s.preguntas.map(p => ({ ...p, seccion: s.titulo })));
-  const totalPregs     = todasPreguntas.length;
-
   const [preguntaIdx, setPreguntaIdx] = useState(0);
   const [respuestas,  setRespuestas]  = useState({});
 
-  const pregunta = todasPreguntas[preguntaIdx];
-  const esUltima = preguntaIdx === totalPregs - 1;
-  const pct      = Math.round((Object.keys(respuestas).length / totalPregs) * 100);
+  const pregunta   = PREGUNTAS[preguntaIdx];
+  const totalPregs = PREGUNTAS.length;
+  const esUltima   = preguntaIdx === totalPregs - 1;
+  const pct        = Math.round((Object.keys(respuestas).length / totalPregs) * 100);
 
   function handleOpcion(valor) {
     const nuevas = { ...respuestas, [pregunta.id]: valor };
@@ -133,7 +118,12 @@ export default function EscalaHHS({ onComplete, onBack }) {
       setTimeout(() => setPreguntaIdx(i => i + 1), 300);
     } else {
       const score = Object.values(nuevas).reduce((a, b) => a + b, 0);
-      onComplete?.({ escala: "HHS", respuestas: nuevas, score, interpretacion: getInterpretacion(score).label });
+      // ← Formato EXACTO que consume RegistroEscalaForm
+      onComplete?.({
+        respuestas: nuevas,
+        score,
+        interpretacion: getInterpretacion(score).label,
+      });
     }
   }
 
@@ -149,7 +139,6 @@ export default function EscalaHHS({ onComplete, onBack }) {
       </div>
 
       <div className="dp-content">
-
         <div className="dp-progress-bar" style={{ marginBottom: 20 }}>
           <div className="dp-progress-fill" style={{ width: `${pct}%` }} />
         </div>
@@ -171,7 +160,8 @@ export default function EscalaHHS({ onComplete, onBack }) {
                   background: respuestas[pregunta.id] === op.valor ? "#0f172a" : "#fff",
                   color: respuestas[pregunta.id] === op.valor ? "#fff" : "#0f172a",
                   fontSize: 15, fontWeight: 500,
-                  cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', system-ui, sans-serif",
                   transition: "all 0.15s",
                 }}
               >
@@ -181,8 +171,11 @@ export default function EscalaHHS({ onComplete, onBack }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-            <button className="dp-btn-secondary" style={{ width: "auto", padding: "10px 16px" }}
-              onClick={() => preguntaIdx > 0 ? setPreguntaIdx(i => i - 1) : onBack?.()}>
+            <button
+              className="dp-btn-secondary"
+              style={{ width: "auto", padding: "10px 16px" }}
+              onClick={() => preguntaIdx > 0 ? setPreguntaIdx(i => i - 1) : onBack?.()}
+            >
               ← Volver
             </button>
           </div>
@@ -195,8 +188,7 @@ export default function EscalaHHS({ onComplete, onBack }) {
             </span>
           </div>
         )}
-
       </div>
     </div>
   );
-        }
+}
