@@ -1,112 +1,94 @@
 import { useState, useEffect } from "react";
 import "../styles/dashboard-pacientes.css";
 import EscalaOKS from "./EscalaOKS";
-import EscalaOHS from "./EscalaOHS";
 import EscalaHHS from "./EscalaHHS";
+// import EscalaOHS from "./EscalaOHS"; // opcional, si agregas oxford_hip al backend
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE;
 
-// ← NUEVO: Mapeo escalas por articulación
-const ESCALAS_POR_SEGMENTO = {
-  cadera:  ["OHS", "HHS"],  // Oxford Hip + Harris Hip
-  rodilla: ["OKS"],         // Oxford Knee  
-  hombro:  ["OHS"],         // Oxford Shoulder (adaptado)
-  tobillo: ["OKS"]          // Oxford Ankle (adaptado)
+// Mapea articulación → claves de escalas del backend (ver ESCALAS en registro_escalas.py)
+// Backend actual soporta: "harris_hip", "oxford_knee", "womac"
+const ESCALAS_POR_ARTICULACION = {
+  cadera:  ["harris_hip"],   // + "womac" si quieres aplicar ambas
+  rodilla: ["oxford_knee"],  // + "womac" si quieres aplicar ambas
 };
 
-function ResultadoFinal({ resultado, esquema, onComplete }) {
-  const colores = {
-    "Excelente": { bg: "#f0fdf4", border: "#bbf7d0", color: "#16a34a" },
-    "Bueno":     { bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb" },
-    "Moderado":  { bg: "#fffbeb", border: "#fde68a", color: "#d97706" },
-    "Regular":   { bg: "#fffbeb", border: "#fde68a", color: "#d97706" },
-    "Severo":    { bg: "#fef2f2", border: "#fecaca", color: "#dc2626" },
-    "Malo":      { bg: "#fef2f2", border: "#fecaca", color: "#dc2626" },
-  };
-  const c = colores[resultado.interpretacion] || colores["Bueno"];
+// Detecta articulación desde el string tipo_protesis o articulacion
+function detectarArticulacion(articulacion) {
+  const a = (articulacion || "").toLowerCase();
+  if (a.includes("cadera"))  return "cadera";
+  if (a.includes("rodilla")) return "rodilla";
+  return null;
+}
 
-  const progreso = Math.round((esquema.completadas + 1) / esquema.total * 100);
+const PERIODO_LABEL = {
+  preop: "Pre-operatorio",
+  "3m":  "3 meses",
+  "6m":  "6 meses",
+  "1a":  "1 año",
+  "2a":  "2 años",
+};
+
+// ============================================================
+// PANTALLA FINAL DE RESULTADO
+// ============================================================
+function ResultadoFinal({ resultado, periodo, onComplete }) {
+  const score        = resultado?.score ?? 0;
+  const interp       = resultado?.interpretacion || "";
+  const escalaNombre = resultado?.escala_nombre || "";
+
+  // Colores según tipo de interpretación
+  function estiloInterpretacion(txt) {
+    const t = (txt || "").toLowerCase();
+    if (t.includes("excel") || t.includes("muy buena"))    return { bg: "#f0fdf4", border: "#bbf7d0", color: "#16a34a" };
+    if (t.includes("bueno") || t.includes("menor"))        return { bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb" };
+    if (t.includes("regular") || t.includes("moderad"))    return { bg: "#fffbeb", border: "#fde68a", color: "#d97706" };
+    if (t.includes("malo") || t.includes("sever") || t.includes("limitada")) return { bg: "#fef2f2", border: "#fecaca", color: "#dc2626" };
+    return { bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb" };
+  }
+  const c = estiloInterpretacion(interp);
 
   return (
     <div className="dp-root">
       <div className="dp-header">
         <div className="dp-header-left">
-          <h1>✅ Evaluación Completada</h1>
-          <p>Progreso actualizado en su registro</p>
+          <h1>✅ Evaluación guardada</h1>
+          <p>Su resultado se registró correctamente</p>
         </div>
       </div>
+
       <div className="dp-content">
         <div className="dp-card" style={{ textAlign: "center" }}>
-
-          {/* ← NUEVO: Progreso del esquema */}
-          <div style={{ 
-            background: "#f8fafc", 
-            borderRadius: 12, 
-            padding: 20, 
-            marginBottom: 24,
-            border: "1px solid #e2e8f0"
-          }}>
-            <div style={{ 
-              fontSize: 13, 
-              color: "#64748b", 
-              marginBottom: 8,
-              fontWeight: 500
-            }}>
-              {esquema.tipo === 'revision' ? '🔄 Revisión' : '🆕 Primaria'} • {esquema.segmento}
-            </div>
-            <div style={{ 
-              fontSize: 28, 
-              fontWeight: 800, 
-              color: "#0f172a", 
-              marginBottom: 12 
-            }}>
-              {esquema.completadas + 1} / {esquema.total}
-            </div>
-            <div style={{ 
-              height: 10, 
-              background: "#e2e8f0", 
-              borderRadius: 5, 
-              overflow: "hidden" 
-            }}>
-              <div style={{ 
-                width: `${progreso}%`, 
-                height: "100%", 
-                background: "#10b981", 
-                borderRadius: 5 
-              }} />
-            </div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
-              {progreso}% completado
-            </div>
-          </div>
 
           <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
 
           <div style={{
-            background: c.bg, 
+            background: c.bg,
             border: `1px solid ${c.border}`,
-            borderRadius: 12, 
-            padding: "24px 20px", 
-            marginBottom: 24,
+            borderRadius: 12,
+            padding: "24px 20px",
+            marginBottom: 20,
           }}>
-            <div style={{ fontSize: 14, color: c.color, fontWeight: 700, marginBottom: 8 }}>
-              {resultado.escala}
+            <div style={{ fontSize: 13, color: c.color, fontWeight: 700, marginBottom: 4 }}>
+              {escalaNombre}
             </div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: c.color, marginBottom: 8 }}>
-              {resultado.score}
+            <div style={{ fontSize: 11, color: c.color, marginBottom: 12 }}>
+              Evaluación {PERIODO_LABEL[periodo] || periodo}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: c.color }}>
-              {resultado.interpretacion}
+            <div style={{ fontSize: 44, fontWeight: 800, color: c.color, marginBottom: 6 }}>
+              {score}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.color }}>
+              {interp}
             </div>
           </div>
 
           <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, marginBottom: 24 }}>
-            Su resultado ha sido registrado exitosamente. 
-            Le avisaremos cuando sea momento de su próxima evaluación.
+            Le avisaremos cuando sea momento de la siguiente evaluación.
           </p>
 
           <button className="dp-btn-primary" onClick={onComplete} style={{ padding: "14px 32px" }}>
-            Ver mi Registro Completo →
+            Volver al mapa →
           </button>
 
         </div>
@@ -115,138 +97,173 @@ function ResultadoFinal({ resultado, esquema, onComplete }) {
   );
 }
 
-export default function RegistroEscalaForm({ 
-  token, 
-  cirugiaId, 
-  articulacion, 
-  periodo, 
-  esquema,  // ← NUEVO: recibe esquema
-  onComplete 
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+export default function RegistroEscalaForm({
+  token,
+  cirugiaId,
+  articulacion,
+  periodo,
+  onComplete,
+  onBack,
 }) {
-  const [escalaActual, setEscalaActual] = useState(null);
-  const [resultados,   setResultados]   = useState({});
+  const artNormalizada = detectarArticulacion(articulacion);
+  const escalasAAplicar = ESCALAS_POR_ARTICULACION[artNormalizada] || [];
+
+  const [indiceEscala, setIndiceEscala] = useState(0);  // Qué escala estamos aplicando
   const [saving,       setSaving]       = useState(false);
-  const [finalResult,  setFinalResult]  = useState(null);
+  const [resultadoFinal, setResultadoFinal] = useState(null); // Último resultado recibido del backend
   const [error,        setError]        = useState(null);
 
-  // ← NUEVO: Determina escalas según segmento del esquema
-  useEffect(() => {
-    if (!esquema?.segmento) return;
-    
-    const escalas = ESCALAS_POR_SEGMENTO[esquema.segmento] || ["OKS"];
-    setEscalaActual(escalas[0]);
-  }, [esquema]);
+  const escalaActualKey = escalasAAplicar[indiceEscala]; // ej: "harris_hip"
 
-  async function handleEscalaComplete(data) {
-    const nuevos = { ...resultados, [data.escala]: data };
+  // Si no hay escala que aplicar, mostrar error amigable
+  if (escalasAAplicar.length === 0) {
+    return (
+      <div className="dp-root">
+        <div className="dp-content" style={{ padding: "48px 24px", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <div style={{ fontSize: 16, color: "#475569", marginBottom: 24 }}>
+            No hay evaluación disponible para esta articulación.
+          </div>
+          <button className="dp-btn-primary" onClick={onComplete}>
+            ← Volver al mapa
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-    // ← MÚLTIPLES ESCALAS: pasa a la siguiente
-    const escalas = ESCALAS_POR_SEGMENTO[esquema?.segmento] || [data.escala];
-    const indiceActual = escalas.indexOf(data.escala);
-    
-    if (indiceActual < escalas.length - 1) {
-      setResultados(nuevos);
-      setEscalaActual(escalas[indiceActual + 1]);
+  // Handler al completar una escala individual (viene de EscalaHHS / EscalaOKS)
+  // Cada hijo debe llamar onComplete({ respuestas: { id1: valor1, id2: valor2, ... } })
+  async function handleEscalaCompleta(data) {
+    if (!data?.respuestas || typeof data.respuestas !== "object") {
+      setError("Formato de respuestas inválido en la escala.");
       return;
     }
 
-    // ← ÚLTIMA ESCALA: guardar todo
     setSaving(true);
+    setError(null);
+
     try {
       const payload = {
-        cirugia_id: cirugiaId,
-        periodo,
-        segmento:   esquema.segmento,  // ← NUEVO
-        tipo:       esquema.tipo,      // ← NUEVO
-        resultados: nuevos,
-        total_esquema: esquema.total,  // ← NUEVO
-        completadas: (esquema.completadas || 0) + 1
+        escala:     escalaActualKey,            // "harris_hip" | "oxford_knee" | "womac"
+        respuestas: data.respuestas,            // { dolor: 44, distancia_marcha: 8, ... }
       };
 
-      const res = await fetch(`${API_URL}/api/registro/escalas`, {
-        method:  "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": `Bearer ${token}` 
-        },
-        body:    JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${API_URL}/api/registro/escalas/${cirugiaId}/${periodo}`,
+        {
+          method:  "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      if (!res.ok) { 
-        const j = await res.json().catch(() => ({})); 
-        throw new Error(j?.detail || "Error guardando evaluación"); 
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.detail || `Error ${res.status} guardando evaluación`);
       }
 
-      setFinalResult(data);
-      
-    } catch (e) { 
-      setError(e.message); 
-    } finally { 
-      setSaving(false); 
+      const resp = await res.json();
+
+      // ¿Hay más escalas que aplicar para esta articulación?
+      const siguiente = indiceEscala + 1;
+      if (siguiente < escalasAAplicar.length) {
+        setIndiceEscala(siguiente);
+      } else {
+        // Última escala → mostrar resultado final
+        setResultadoFinal({
+          score:          resp.score,
+          interpretacion: resp.interpretacion,
+          escala_nombre:  resp.escala_nombre || escalaActualKey,
+        });
+      }
+
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
-  if (saving) return (
-    <div className="dp-root">
-      <div className="dp-content" style={{ padding: "64px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 24 }}>💾</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", marginBottom: 12 }}>
-          Guardando evaluación...
-        </div>
-        <div style={{ fontSize: 14, color: "#64748b" }}>
-          Actualizando su progreso: {esquema?.completadas + 1}/{esquema?.total}
+  // Loading
+  if (saving) {
+    return (
+      <div className="dp-root">
+        <div className="dp-content" style={{ padding: "64px 24px", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 24 }}>💾</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#0f172a", marginBottom: 8 }}>
+            Guardando evaluación...
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (error) return (
-    <div className="dp-content">
-      <div className="registro-error" style={{ marginBottom: 24 }}>{error}</div>
-      <button className="dp-btn-secondary" style={{ width: "100%", padding: "14px" }} 
-        onClick={onComplete}>
-        Ver Registro →
-      </button>
-    </div>
-  );
-
-  if (finalResult) {
+  // Error
+  if (error) {
     return (
-      <ResultadoFinal 
-        resultado={finalResult} 
-        esquema={esquema} 
-        onComplete={onComplete} 
+      <div className="dp-root">
+        <div className="dp-content" style={{ padding: "32px 24px" }}>
+          <div className="registro-error" style={{ marginBottom: 16 }}>
+            ❌ {error}
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              className="dp-btn-secondary"
+              style={{ flex: 1, padding: "14px" }}
+              onClick={() => setError(null)}
+            >
+              Reintentar
+            </button>
+            <button
+              className="dp-btn-primary"
+              style={{ flex: 1, padding: "14px" }}
+              onClick={onComplete}
+            >
+              Volver al mapa
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Resultado final
+  if (resultadoFinal) {
+    return (
+      <ResultadoFinal
+        resultado={resultadoFinal}
+        periodo={periodo}
+        onComplete={onComplete}
       />
     );
   }
 
-  // ← RENDER DINÁMICO por escala actual
-  const propsEscala = { 
-    onComplete: handleEscalaComplete, 
-    onBack: () => {
-      const escalas = ESCALAS_POR_SEGMENTO[esquema?.segmento] || [];
-      const indice = escalas.indexOf(escalaActual);
-      if (indice > 0) {
-        setEscalaActual(escalas[indice - 1]);
-      } else {
-        onComplete();
-      }
-    }
+  // Render de la escala actual
+  const propsEscala = {
+    onComplete: handleEscalaCompleta,
+    onBack:     onBack || onComplete,
   };
 
-  if (escalaActual === "OKS") return <EscalaOKS {...propsEscala} />;
-  if (escalaActual === "OHS") return <EscalaOHS {...propsEscala} />;
-  if (escalaActual === "HHS") return <EscalaHHS {...propsEscala} />;
+  if (escalaActualKey === "oxford_knee") return <EscalaOKS {...propsEscala} />;
+  if (escalaActualKey === "harris_hip")  return <EscalaHHS {...propsEscala} />;
+  // if (escalaActualKey === "oxford_hip")  return <EscalaOHS {...propsEscala} />; // si activas oxford_hip en backend
 
-  // ← Loading inicial
+  // Fallback
   return (
     <div className="dp-root">
-      <div className="dp-content" style={{ padding: "64px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 24 }}>📋</div>
-        <div style={{ fontSize: 18, color: "#64748b" }}>
-          Preparando evaluación para {esquema?.segmento}...
-        </div>
+      <div className="dp-content" style={{ padding: "48px 24px", textAlign: "center" }}>
+        <div>Escala no implementada: {escalaActualKey}</div>
+        <button className="dp-btn-primary" style={{ marginTop: 16 }} onClick={onComplete}>
+          Volver
+        </button>
       </div>
     </div>
   );
-}
+      }
