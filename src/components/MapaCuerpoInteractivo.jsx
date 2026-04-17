@@ -5,10 +5,10 @@ import { calcularEscalaPendiente } from "../utils/calcularEscalaPendiente";
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
 const PUNTOS_ARTICULACIONES = [
-  { id: "cadera-derecha",    x: 168, y: 355, label: "Cadera D" },
-  { id: "cadera-izquierda",  x: 232, y: 355, label: "Cadera I" },
-  { id: "rodilla-derecha",   x: 172, y: 478, label: "Rodilla D" },
-  { id: "rodilla-izquierda", x: 228, y: 478, label: "Rodilla I" },
+  { id: "cadera-derecha",    x: 160, y: 395, label: "Cadera D" },
+  { id: "cadera-izquierda",  x: 240, y: 395, label: "Cadera I" },
+  { id: "rodilla-derecha",   x: 165, y: 535, label: "Rodilla D" },
+  { id: "rodilla-izquierda", x: 235, y: 535, label: "Rodilla I" },
 ];
 
 function IconoCadera({ x, y, color = "#2563eb" }) {
