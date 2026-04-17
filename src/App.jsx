@@ -6,7 +6,6 @@ import PasoImplante        from "./components/PasoImplante";
 import PasoFecha           from "./components/PasoFecha";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
-import { calcularEscalaPendiente } from "./utils/calcularEscalaPendiente";
 import "./styles/dashboard-pacientes.css";
 
 const LOGO_URL = "https://lh3.googleusercontent.com/sitesv/APaQ0SSMBWniO2NWVDwGoaCaQjiel3lBKrmNgpaZZY-ZsYzTawYaf-_7Ad-xfeKVyfCqxa7WgzhWPKHtdaCS0jGtFRrcseP-R8KG1LfY2iYuhZeClvWEBljPLh9KANIClyKSsiSJH8_of4LPUOJUl7cWNwB2HKR7RVH_xB_h9BG-8Nr9jnorb-q2gId2=w300";
@@ -24,22 +23,15 @@ const ProthesisIcon = () => (
   </svg>
 );
 
-// Solo se muestra cuando está agregando una nueva prótesis
 const BARRA_NUEVA = ["lugar", "cirugia", "implante", "fecha"];
-const BARRA_LABEL = {
-  lugar:    "Centro",
-  cirugia:  "Cirugía",
-  implante: "Implante",
-  fecha:    "Fecha",
-};
 
 export default function App() {
   const [paso,      setPaso]      = useState("inicio");
   const [token,     setToken]     = useState(null);
   const [datos,     setDatos]     = useState({});
   const [cirugiaId, setCirugiaId] = useState(null);
-  const [periodo,   setPeriodo]   = useState("postop");
-  const [segmentoPreSeleccionado, setSegmentoPreSeleccionado] = useState(null);
+  const [periodo,   setPeriodo]   = useState("preop");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   function handleSalir() {
     setToken(null); setDatos({}); setCirugiaId(null); setPaso("inicio");
@@ -49,36 +41,35 @@ export default function App() {
     setDatos(prev => ({ ...prev, ...d }));
   }
 
-  // ==== HANDLERS DEL DASHBOARD (mapa corporal) ====
+  function volverDashboard() {
+    setDatos({});
+    setRefreshKey(k => k + 1); // fuerza recarga del dashboard
+    setPaso("dashboard");
+  }
 
-  // Click en punto VACÍO → iniciar flujo nueva prótesis
+  // Click en punto VACÍO → preselecciona articulación + lado y abre flujo nuevo
   function handleClickPuntoVacio(segmentoId) {
-    // segmentoId: "cadera-derecha" | "cadera-izquierda" | "rodilla-derecha" | "rodilla-izquierda"
     const [articulacion, lado] = segmentoId.split("-");
     setDatos({ articulacion, lado });
-    setSegmentoPreSeleccionado(segmentoId);
     setPaso("lugar");
   }
 
   // Click en prótesis EXISTENTE → escala pendiente o vista detalle
   function handleClickProtesis(cirugia) {
-    const estado = calcularEscalaPendiente(cirugia);
+    // Importamos aquí para evitar ciclo de imports en algunos bundlers
+    import("./utils/calcularEscalaPendiente").then(({ calcularEscalaPendiente }) => {
+      const estado = calcularEscalaPendiente(cirugia);
 
-    if (estado.tipo === "pendiente") {
-      // Hay escala pendiente → ir directo a completarla
-      setCirugiaId(cirugia.id);
-      setPeriodo(estado.periodo);
-      mergeDatos({ articulacion: cirugia.articulacion });
-      setPaso("escala");
-    } else if (estado.tipo === "al_dia") {
-      // Ya completó la escala de la ventana actual → vista detalle
-      setCirugiaId(cirugia.id);
-      setPaso("detalle");
-    } else {
-      // Fuera de ventana (ej: pasaron >36 meses) → vista detalle
-      setCirugiaId(cirugia.id);
-      setPaso("detalle");
-    }
+      if (estado.tipo === "pendiente") {
+        setCirugiaId(cirugia.id);
+        setPeriodo(estado.periodo);
+        mergeDatos({ articulacion: cirugia.articulacion });
+        setPaso("escala");
+      } else {
+        setCirugiaId(cirugia.id);
+        setPaso("detalle");
+      }
+    });
   }
 
   const pasoIdx = BARRA_NUEVA.indexOf(paso);
@@ -99,16 +90,16 @@ export default function App() {
         )}
       </div>
 
-      {/* Botón "Volver al inicio" cuando está en flujo de nueva prótesis */}
+      {/* Barra pasos (solo durante flujo nueva prótesis) */}
       {pasoIdx >= 0 && token && (
         <div style={{ padding: "10px 16px", background: "#fff", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => { setDatos({}); setSegmentoPreSeleccionado(null); setPaso("dashboard"); }}
-            style={{ background: "transparent", border: "none", color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            onClick={volverDashboard}
+            style={{ background: "transparent", border: "none", color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
           >
-            ← Volver al mapa
+            ← Mapa
           </button>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, overflowX: "auto" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
             {BARRA_NUEVA.map((p, i) => (
               <div key={p} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{
@@ -152,7 +143,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ADMIN → al completar va directo al DASHBOARD */}
+      {/* ADMIN → tras completar va al DASHBOARD */}
       {paso === "admin" && (
         <RegistroAdminForm
           onTokenReady={t => setToken(t)}
@@ -164,6 +155,7 @@ export default function App() {
       {/* DASHBOARD = MAPA CORPORAL (pantalla home post-login) */}
       {paso === "dashboard" && token && (
         <RegistroDashboard
+          key={refreshKey}
           token={token}
           onClickPuntoVacio={handleClickPuntoVacio}
           onClickProtesis={handleClickProtesis}
@@ -174,7 +166,7 @@ export default function App() {
       {paso === "lugar" && token && (
         <PasoLugar
           onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
-          onBack={() => setPaso("dashboard")}
+          onBack={volverDashboard}
           inicial={datos}
         />
       )}
@@ -209,27 +201,29 @@ export default function App() {
         />
       )}
 
-      {/* ESCALA — al terminar, vuelve al DASHBOARD */}
+      {/* ESCALA → al terminar vuelve al DASHBOARD */}
       {paso === "escala" && token && cirugiaId && (
         <RegistroEscalaForm
           token={token}
           cirugiaId={cirugiaId}
           articulacion={datos.articulacion}
           periodo={periodo}
-          onComplete={() => {
-            setDatos({});
-            setSegmentoPreSeleccionado(null);
-            setPaso("dashboard");
-          }}
-          onBack={() => setPaso("dashboard")}
+          onComplete={volverDashboard}
+          onBack={volverDashboard}
         />
       )}
 
-      {/* DETALLE de prótesis al día (opcional, puedes implementarlo después) */}
+      {/* DETALLE de prótesis al día */}
       {paso === "detalle" && token && cirugiaId && (
-        <div style={{ padding: 24, textAlign: "center" }}>
-          <p>Vista detalle de cirugía {cirugiaId} (historial de escalas)</p>
-          <button className="dp-btn-secondary" onClick={() => setPaso("dashboard")}>
+        <div style={{ padding: 24, textAlign: "center", maxWidth: 400, margin: "0 auto" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
+            Esta prótesis está al día
+          </h2>
+          <p style={{ fontSize: 14, color: "#475569", marginBottom: 24, lineHeight: 1.5 }}>
+            No tiene evaluaciones pendientes en este momento. Le avisaremos cuando corresponda la siguiente.
+          </p>
+          <button className="dp-btn-primary" onClick={volverDashboard}>
             ← Volver al mapa
           </button>
         </div>
@@ -241,4 +235,4 @@ export default function App() {
 
     </div>
   );
-      }
+}
