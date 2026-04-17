@@ -13,7 +13,6 @@ const SEGMENTOS_VALIDOS = [
   "rodilla-derecha", "rodilla-izquierda",
 ];
 
-// "Cadera total" → "cadera", "Rodilla unicompartimental" → "rodilla"
 function normalizarTipo(tipo) {
   const t = tipo?.toLowerCase() || "";
   if (t.includes("cadera")) return "cadera";
@@ -21,7 +20,6 @@ function normalizarTipo(tipo) {
   return t;
 }
 
-// "Derecho" → "derecha", "Izquierdo" → "izquierda"
 function normalizarLado(lado) {
   const l = lado?.toLowerCase() || "";
   if (l.includes("derech")) return "derecha";
@@ -99,11 +97,16 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
           <h1>Mi Registro de Prótesis</h1>
           <p>Seleccione una articulación en el mapa para ver detalles o registrar</p>
         </div>
+        {onSalir && (
+          <button className="dp-btn-secondary" style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
+            onClick={onSalir}>
+            Salir
+          </button>
+        )}
       </div>
 
       <div className="dp-content-panes">
 
-        {/* MAPA */}
         <div className="dp-map-pane">
           <MapaCuerpoInteractivo
             mapaProtesis={mapaProtesis}
@@ -112,11 +115,9 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
           />
         </div>
 
-        {/* PANEL DERECHO */}
         <div className="dp-details-pane">
           {error && <div className="dp-error" style={{ marginBottom: 12 }}>{error}</div>}
 
-          {/* Estado inicial */}
           {!segmentoSeleccionado && (
             <div className="dp-card dp-empty-state">
               <div style={{ fontSize: 48, marginBottom: 12 }}>👈</div>
@@ -125,7 +126,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
             </div>
           )}
 
-          {/* Sin prótesis en segmento */}
           {segmentoSeleccionado && !cirugiaSeleccionada && (
             <div className="dp-card">
               <div className="dp-card-header-map">
@@ -142,7 +142,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
             </div>
           )}
 
-          {/* Con prótesis */}
           {cirugiaSeleccionada && (() => {
             const c          = cirugiaSeleccionada;
             const pendientes = getPendientes(c);
@@ -170,7 +169,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
                   </p>
                 )}
 
-                {/* Barra progreso */}
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Evaluaciones</span>
@@ -181,7 +179,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
                   </div>
                 </div>
 
-                {/* Períodos */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 5, marginBottom: 14 }}>
                   {PERIODOS_ORDEN.map(p => {
                     const ok = (c.escalas_programadas || {})[p]?.completada;
@@ -200,7 +197,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
                   })}
                 </div>
 
-                {/* Escala pendiente */}
                 {proximo && (
                   <div className="dp-accion-pendiente" style={{ marginBottom: 10 }}>
                     <div>
@@ -220,7 +216,6 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
                   </div>
                 )}
 
-                {/* Revisión */}
                 <button className="dp-btn-secondary full-width"
                   onClick={() => onNuevaCirugia?.(segmentoSeleccionado, "revision")}>
                   Registrar cirugía de revisión
@@ -236,4 +231,4 @@ export default function RegistroDashboard({ token, onNuevaCirugia, onCompletarEs
       </p>
     </div>
   );
-}
+                  }
