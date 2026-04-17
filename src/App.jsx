@@ -6,6 +6,7 @@ import PasoImplante        from "./components/PasoImplante";
 import PasoFecha           from "./components/PasoFecha";
 import RegistroEscalaForm  from "./components/RegistroEscalaForm";
 import RegistroDashboard   from "./components/RegistroDashboard";
+import { calcularEscalaPendiente } from "./utils/calcularEscalaPendiente";
 import "./styles/dashboard-pacientes.css";
 
 const LOGO_URL = "https://lh3.googleusercontent.com/sitesv/APaQ0SSMBWniO2NWVDwGoaCaQjiel3lBKrmNgpaZZY-ZsYzTawYaf-_7Ad-xfeKVyfCqxa7WgzhWPKHtdaCS0jGtFRrcseP-R8KG1LfY2iYuhZeClvWEBljPLh9KANIClyKSsiSJH8_of4LPUOJUl7cWNwB2HKR7RVH_xB_h9BG-8Nr9jnorb-q2gId2=w300";
@@ -25,12 +26,19 @@ const ProthesisIcon = () => (
 
 const BARRA_NUEVA = ["lugar", "cirugia", "implante", "fecha"];
 
+// Mapea segmento del mapa → valores que el backend espera (Cadera/Rodilla, Derecho/Izquierdo)
+function segmentoALadoBackend(segmentoId) {
+  const [articulacion, ladoMapa] = segmentoId.split("-");
+  const lado = ladoMapa === "derecha" ? "Derecho" : "Izquierdo";
+  return { articulacion, lado };
+}
+
 export default function App() {
-  const [paso,      setPaso]      = useState("inicio");
-  const [token,     setToken]     = useState(null);
-  const [datos,     setDatos]     = useState({});
-  const [cirugiaId, setCirugiaId] = useState(null);
-  const [periodo,   setPeriodo]   = useState("preop");
+  const [paso,       setPaso]       = useState("inicio");
+  const [token,      setToken]      = useState(null);
+  const [datos,      setDatos]      = useState({});
+  const [cirugiaId,  setCirugiaId]  = useState(null);
+  const [periodo,    setPeriodo]    = useState("preop");
   const [refreshKey, setRefreshKey] = useState(0);
 
   function handleSalir() {
@@ -43,33 +51,29 @@ export default function App() {
 
   function volverDashboard() {
     setDatos({});
-    setRefreshKey(k => k + 1); // fuerza recarga del dashboard
+    setRefreshKey(k => k + 1);
     setPaso("dashboard");
   }
 
-  // Click en punto VACÍO → preselecciona articulación + lado y abre flujo nuevo
+  // Click en punto VACÍO → arranca flujo de nueva prótesis con preselección
   function handleClickPuntoVacio(segmentoId) {
-    const [articulacion, lado] = segmentoId.split("-");
+    const { articulacion, lado } = segmentoALadoBackend(segmentoId);
     setDatos({ articulacion, lado });
     setPaso("lugar");
   }
 
   // Click en prótesis EXISTENTE → escala pendiente o vista detalle
   function handleClickProtesis(cirugia) {
-    // Importamos aquí para evitar ciclo de imports en algunos bundlers
-    import("./utils/calcularEscalaPendiente").then(({ calcularEscalaPendiente }) => {
-      const estado = calcularEscalaPendiente(cirugia);
-
-      if (estado.tipo === "pendiente") {
-        setCirugiaId(cirugia.id);
-        setPeriodo(estado.periodo);
-        mergeDatos({ articulacion: cirugia.articulacion });
-        setPaso("escala");
-      } else {
-        setCirugiaId(cirugia.id);
-        setPaso("detalle");
-      }
-    });
+    const estado = calcularEscalaPendiente(cirugia);
+    if (estado.tipo === "pendiente") {
+      setCirugiaId(cirugia.id);
+      setPeriodo(estado.periodo);
+      mergeDatos({ articulacion: cirugia.tipo_protesis, lado: cirugia.lado });
+      setPaso("escala");
+    } else {
+      setCirugiaId(cirugia.id);
+      setPaso("detalle");
+    }
   }
 
   const pasoIdx = BARRA_NUEVA.indexOf(paso);
@@ -152,7 +156,7 @@ export default function App() {
         />
       )}
 
-      {/* DASHBOARD = MAPA CORPORAL (pantalla home post-login) */}
+      {/* DASHBOARD = MAPA CORPORAL (home post-login) */}
       {paso === "dashboard" && token && (
         <RegistroDashboard
           key={refreshKey}
