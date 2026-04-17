@@ -1,14 +1,7 @@
 import { useState } from "react";
 import "../styles/dashboard-pacientes.css";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-const PERIODO_LABEL = {
-  "postop": "Evaluación postoperatoria temprana (0-3 meses)",
-  "6m":     "Evaluación 6 meses",
-  "1a":     "Evaluación 1 año",
-  "2a":     "Evaluación 2 años o más",
-};
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE;
 
 function getDias(fechaISO) {
   if (!fechaISO) return null;
@@ -16,122 +9,131 @@ function getDias(fechaISO) {
   return diff >= 0 ? diff : null;
 }
 
-function getPeriodo(dias) {
-  if (dias === null) return null;
-  if (dias <= 90)  return "postop";
-  if (dias <= 270) return "6m";
-  if (dias <= 545) return "1a";
-  return "2a";
+// Normaliza lado al formato que espera el backend: "Derecho" | "Izquierdo"
+function normalizarLado(lado) {
+  if (!lado) return "";
+  const l = lado.toLowerCase();
+  if (l.startsWith("d")) return "Derecho";
+  if (l.startsWith("i")) return "Izquierdo";
+  return lado;
+}
+
+// Construye el tipo_protesis que espera el backend
+// Opciones válidas en el backend: "Cadera total", "Cadera parcial (hemiartroplastía)",
+//                                 "Rodilla total", "Rodilla unicompartimental"
+function construirTipoProtesis(datos) {
+  // Si el paso anterior ya eligió tipo_cirugia o tipo_protesis completo, úsalo
+  if (datos.tipo_protesis) return datos.tipo_protesis;
+  if (datos.tipo_cirugia && datos.tipo_cirugia.includes(" ")) return datos.tipo_cirugia;
+
+  // Fallback: construir desde articulación
+  const art = (datos.articulacion || "").toLowerCase();
+  if (art.includes("cadera"))  return "Cadera total";
+  if (art.includes("rodilla")) return "Rodilla total";
+  return datos.articulacion || "";
 }
 
 export default function PasoFecha({ token, datos, onComplete, onBack }) {
   const [fechaCirugia, setFechaCirugia] = useState(datos.fecha_cirugia || "");
-  const [lado, setLado] = useState(datos.lado || ""); // ← NUEVO
-  const [segmento, setSegmento] = useState(datos.segmento || ""); // ← NUEVO
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const dias = getDias(fechaCirugia);
-  const periodo = getPeriodo(dias);
-
-  // ← NUEVO: Mapeo de articulaciones a segmentos
-  const SEGMENTOS_MAP = {
-    "cadera": "cadera",
-    "rodilla": "rodilla", 
-    "hombro": "hombro",
-    "tobillo": "tobillo"
-  };
+  const ladoNormalizado     = normalizarLado(datos.lado);
+  const tipoProtesisFinal   = construirTipoProtesis(datos);
 
   async function handleGuardar() {
-    if (!fechaCirugia) { 
-      setError("Ingrese la fecha de su cirugía"); 
-      return; 
+    if (!fechaCirugia) {
+      setError("Ingrese la fecha de su cirugía");
+      return;
     }
-    if (!lado) { 
-      setError("Seleccione el lado de la prótesis"); 
-      return; 
+    if (dias === null) {
+      setError("La fecha no puede ser futura");
+      return;
     }
-    if (!segmento) { 
-      setError("Seleccione el segmento/articulación"); 
-      return; 
+    if (!tipoProtesisFinal) {
+      setError("Falta el tipo de prótesis. Vuelva atrás y complételo.");
+      return;
     }
-    if (dias === null) { 
-      setError("La fecha no puede ser futura"); 
-      return; 
+    if (!ladoNormalizado) {
+      setError("Falta el lado de la prótesis. Vuelva atrás y complételo.");
+      return;
     }
-    
+
     setError(null);
     setSaving(true);
-    
+
     try {
+      // Payload exacto que espera el backend (ver routers/registro_cirugia.py → CirugiaPayload)
       const payload = {
-        // ← DATOS CLAVE para límites
-        segmento:     segmento,
-        lado:         lado,
-        
-        // ← DATOS DE CIRUGÍA
-        fecha_cirugia: fechaCirugia,
-        tipo_protesis: datos.tipo_cirugia || `${segmento} total`,
-        
-        // ← DATOS DE CLÍNICA
-        nombre_clinica:  datos.clinica    || "",
-        ciudad_clinica:  datos.ciudad     || "",
-        region_clinica:  datos.region     || "",
-        
-        // ← DATOS MÉDICO
-        nombre_cirujano: datos.nombre_medico || "Por confirmar",
-        rut_cirujano:    datos.rut_medico    || "",
-        indicacion:      datos.indicacion    || "",
-        
-        // ← DATOS IMPLANTE
-        marca_implante:  datos.marca     || "",
-        modelo_implante: datos.modelo    || "",
-        cotilo:          datos.cotilo    || "",
-        vastago:         datos.vastago   || "",
-        robotica:        datos.robotica  || "",
-        alineacion:      datos.alineacion || "",
-        
-        notas: "",
+        fecha_cirugia:    fechaCirugia,
+        tipo_protesis:    tipoProtesisFinal,
+        lado:             ladoNormalizado,
+        indicacion:       datos.indicacion || "",
+
+        // Clínica
+        nombre_clinica:   datos.clinica        || datos.nombre_clinica || "",
+        ciudad_clinica:   datos.ciudad         || datos.ciudad_clinica || "",
+        region_clinica:   datos.region         || datos.region_clinica || "",
+
+        // Cirujano
+        nombre_cirujano:  datos.nombre_medico  || datos.nombre_cirujano || "Por confirmar",
+        rut_cirujano:     datos.rut_medico     || datos.rut_cirujano    || "",
+
+        // Implante
+        marca_implante:   datos.marca          || datos.marca_implante  || "",
+        modelo_implante:  datos.modelo         || datos.modelo_implante || "",
+        cotilo:           datos.cotilo         || "",
+        vastago:          datos.vastago        || "",
+        fijacion:         datos.fijacion       || "",
+        abordaje:         datos.abordaje       || "",
+        alineacion:       datos.alineacion     || "",
+        robotica:         datos.robotica       || "",
+
+        // Extras
+        prevision:        datos.prevision      || "",
+        notas:            datos.notas          || "",
       };
 
       const res = await fetch(`${API_URL}/api/registro/cirugia`, {
         method:  "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": `Bearer ${token}` 
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`,
         },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.detail || "Error guardando cirugía");
+        throw new Error(j?.detail || `Error ${res.status} guardando cirugía`);
       }
 
       const data = await res.json();
-      
-      // ← ENVÍA TODO lo necesario para el esquema
+
+      // Prótesis creada → volver al dashboard actualizado
       onComplete?.({
-        id: data.id || data.data?.id, 
-        periodo_escala: periodo,
-        lado,
-        segmento,
-        tipo: datos.tipo_cirugia // primaria/revision se detectará en backend
+        id: data.id || data.data?.id,
       });
 
-    } catch (e) { 
-      setError(e.message); 
-    } finally { 
-      setSaving(false); 
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
     }
   }
+
+  // Helpers de display
+  const tieneLugar    = !!(datos.clinica || datos.nombre_clinica);
+  const tieneCirugia  = !!tipoProtesisFinal;
+  const tieneImplante = !!(datos.marca || datos.marca_implante);
 
   return (
     <div className="dp-root">
       <div className="dp-header">
         <div className="dp-header-left">
-          <h1>Fecha y Detalles</h1>
-          <p>Complete la información final de su prótesis</p>
+          <h1>Fecha de cirugía</h1>
+          <p>Último paso: indique cuándo fue operado</p>
         </div>
       </div>
 
@@ -144,152 +146,147 @@ export default function PasoFecha({ token, datos, onComplete, onBack }) {
             </div>
           )}
 
-          {/* LADO */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ 
-              display: "block", 
-              fontSize: 13, 
-              fontWeight: 600, 
-              color: "#374151", 
-              marginBottom: 6 
-            }}>
-              Lado de la prótesis *
-            </label>
-            <div style={{ display: "flex", gap: 8 }}>
-              <label style={{ 
-                flex: 1, 
-                padding: "12px", 
-                border: `2px solid ${lado === 'der' ? '#0f172a' : '#e5e7eb'}`, 
-                borderRadius: 8, 
-                textAlign: "center",
-                cursor: "pointer",
-                background: lado === 'der' ? '#f3f4f6' : 'transparent',
-                transition: "all 0.2s"
-              }}
-                onClick={() => setLado('der')}
-              >
-                <div style={{ fontSize: 48, lineHeight: 1 }}>🦵</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>Derecho</div>
-              </label>
-              <label style={{ 
-                flex: 1, 
-                padding: "12px", 
-                border: `2px solid ${lado === 'izq' ? '#0f172a' : '#e5e7eb'}`, 
-                borderRadius: 8, 
-                textAlign: "center",
-                cursor: "pointer",
-                background: lado === 'izq' ? '#f3f4f6' : 'transparent',
-                transition: "all 0.2s"
-              }}
-                onClick={() => setLado('izq')}
-              >
-                <div style={{ fontSize: 48, lineHeight: 1 }}>🦿</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>Izquierdo</div>
-              </label>
+          {/* RESUMEN (no editable) */}
+          <div style={{
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 10,
+            padding: "14px 16px",
+            marginBottom: 20,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+              Resumen de su prótesis
             </div>
-          </div>
 
-          {/* SEGMENTO */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ 
-              display: "block", 
-              fontSize: 13, 
-              fontWeight: 600, 
-              color: "#374151", 
-              marginBottom: 6 
-            }}>
-              Articulación *
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
-              {Object.entries(SEGMENTOS_MAP).map(([key, value]) => (
-                <label key={key} style={{ 
-                  padding: "12px 8px", 
-                  border: `2px solid ${segmento === value ? '#0f172a' : '#e5e7eb'}`, 
-                  borderRadius: 8, 
-                  textAlign: "center",
-                  cursor: "pointer",
-                  background: segmento === value ? '#f3f4f6' : 'transparent',
-                  transition: "all 0.2s"
-                }}
-                  onClick={() => setSegmento(value)}
-                >
-                  <div style={{ fontSize: 28, lineHeight: 1, marginBottom: 4 }}>
-                    {key === 'cadera' ? '🦴' : key === 'rodilla' ? '🦵' : key === 'hombro' ? '🦾' : '🦶'}
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                  </div>
-                </label>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <ItemResumen
+                label="Articulación"
+                valor={`${tipoProtesisFinal || "—"} ${ladoNormalizado ? `· ${ladoNormalizado.toLowerCase()}` : ""}`}
+                icono="🦴"
+              />
+
+              {tieneLugar && (
+                <ItemResumen
+                  label="Centro"
+                  valor={`${datos.clinica || datos.nombre_clinica}${(datos.ciudad || datos.ciudad_clinica) ? ` · ${datos.ciudad || datos.ciudad_clinica}` : ""}`}
+                  icono="🏥"
+                />
+              )}
+
+              {(datos.nombre_medico || datos.nombre_cirujano) && (
+                <ItemResumen
+                  label="Cirujano"
+                  valor={datos.nombre_medico || datos.nombre_cirujano}
+                  icono="👨‍⚕️"
+                />
+              )}
+
+              {tieneImplante && (
+                <ItemResumen
+                  label="Implante"
+                  valor={[
+                    datos.marca || datos.marca_implante,
+                    datos.modelo || datos.modelo_implante,
+                    datos.cotilo,
+                    datos.vastago,
+                  ].filter(Boolean).join(" · ")}
+                  icono="🔩"
+                />
+              )}
+
+              {datos.indicacion && (
+                <ItemResumen
+                  label="Indicación"
+                  valor={datos.indicacion}
+                  icono="📋"
+                />
+              )}
             </div>
           </div>
 
           {/* FECHA */}
-          <p className="dp-section-title" style={{ marginBottom: 8 }}>Fecha de la cirugía</p>
+          <p className="dp-section-title" style={{ marginBottom: 8 }}>
+            Fecha de la cirugía *
+          </p>
           <div className="registro-form">
             <input
               type="date"
               value={fechaCirugia}
               max={new Date().toISOString().slice(0, 10)}
-              onChange={e => { 
-                setFechaCirugia(e.target.value); 
-                setError(null); 
+              onChange={e => {
+                setFechaCirugia(e.target.value);
+                setError(null);
               }}
-              style={{ fontSize: 16 }}
+              style={{ fontSize: 16, width: "100%" }}
             />
           </div>
 
-          {/* Preview del periodo */}
-          {fechaCirugia && dias !== null && periodo && (
+          {/* Preview de días transcurridos */}
+          {fechaCirugia && dias !== null && (
             <div style={{
-              background: "#f0fdf4", 
-              border: "1px solid #bbf7d0",
-              borderRadius: 10, 
-              padding: "14px 16px", 
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: 10,
+              padding: "12px 14px",
               marginTop: 12,
+              fontSize: 13,
+              color: "#1e40af",
+              fontWeight: 600,
             }}>
-              <div style={{ 
-                fontSize: 13, 
-                fontWeight: 700, 
-                color: "#166534", 
-                marginBottom: 8 
-              }}>
-                📅 {dias === 0 ? "Operado hoy" : `${dias} día${dias !== 1 ? "s" : ""} desde cirugía`}
-              </div>
-              <div style={{
-                background: "#0f172a", 
-                color: "#fff",
-                borderRadius: 8, 
-                padding: "8px 12px",
-                fontSize: 12, 
-                fontWeight: 700, 
-                display: "inline-block",
-              }}>
-                📋 {PERIODO_LABEL[periodo]}
-              </div>
+              📅 {dias === 0 ? "Operado hoy" : `${dias} día${dias !== 1 ? "s" : ""} desde la cirugía`}
+            </div>
+          )}
+
+          {/* Info sobre siguiente paso */}
+          {fechaCirugia && dias !== null && (
+            <div style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: 10,
+              padding: "12px 14px",
+              marginTop: 10,
+              fontSize: 12,
+              color: "#166534",
+              lineHeight: 1.5,
+            }}>
+              ✅ Al finalizar, su prótesis quedará registrada en el mapa. Podrá completar las evaluaciones de seguimiento tocándola.
             </div>
           )}
 
           {/* Botones */}
           <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-            <button 
-              className="dp-btn-secondary" 
+            <button
+              className="dp-btn-secondary"
               style={{ flex: 1, padding: "12px 0" }}
               onClick={onBack}
+              disabled={saving}
             >
               ← Volver
             </button>
-            <button 
-              className="dp-btn-primary" 
-              style={{ flex: 1, padding: "12px 0" }}
+            <button
+              className="dp-btn-primary"
+              style={{ flex: 2, padding: "12px 0" }}
               onClick={handleGuardar}
-              disabled={!fechaCirugia || !lado || !segmento || saving || dias === null}
+              disabled={!fechaCirugia || saving || dias === null}
             >
-              {saving ? "Guardando…" : "💾 Finalizar Registro"}
+              {saving ? "Guardando…" : "💾 Finalizar registro"}
             </button>
           </div>
 
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Fila de resumen
+function ItemResumen({ label, valor, icono }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13 }}>
+      <span style={{ fontSize: 16, lineHeight: 1.2 }}>{icono}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{label}</div>
+        <div style={{ color: "#0f172a", fontWeight: 600, wordBreak: "break-word" }}>{valor}</div>
       </div>
     </div>
   );
