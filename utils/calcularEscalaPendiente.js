@@ -1,9 +1,7 @@
-// Ventanas de seguimiento estándar para PROMs en artroplastía
-// preop: antes de la cirugía
-// 3m: ventana 2-5 meses post-op
-// 6m: ventana 5-9 meses post-op
-// 1a: ventana 9-18 meses post-op
-// 2a: ventana 18-36 meses post-op
+// Lee el formato real del backend:
+//   tipo_protesis: "Cadera total" | "Cadera parcial (hemiartroplastía)" | "Rodilla total" | "Rodilla unicompartimental"
+//   lado: "Derecho" | "Izquierdo"
+//   escalas_programadas: { preop: {completada, programada, email_enviado, fecha_envio}, "3m": {...}, ... }
 
 const VENTANAS = [
   { periodo: "preop", min: -999, max: 0    },
@@ -21,24 +19,28 @@ const PERIODO_LABEL = {
   "2a":  "2 años",
 };
 
+// Mapea tipo_protesis del backend → segmento del mapa corporal
+export function tipoProtesisASegmento(tipo_protesis, lado) {
+  const tipo = (tipo_protesis || "").toLowerCase();
+  const ladoNorm = (lado || "").toLowerCase().startsWith("d") ? "derecha" : "izquierda";
+  const articulacion = tipo.includes("cadera") ? "cadera" : (tipo.includes("rodilla") ? "rodilla" : null);
+  if (!articulacion) return null;
+  return `${articulacion}-${ladoNorm}`;
+}
+
 export function calcularEscalaPendiente(cirugia) {
-  if (!cirugia?.fecha_cirugia) {
-    return { tipo: "sin_fecha" };
-  }
+  if (!cirugia?.fecha_cirugia) return { tipo: "sin_fecha" };
 
   const ep = cirugia.escalas_programadas || {};
   const fechaCx = new Date(cirugia.fecha_cirugia);
   const hoy = new Date();
   const mesesTranscurridos = (hoy - fechaCx) / (1000 * 60 * 60 * 24 * 30.44);
 
-  // Ventana actual
   const ventanaActual = VENTANAS.find(
     v => mesesTranscurridos >= v.min && mesesTranscurridos < v.max
   );
 
-  if (!ventanaActual) {
-    return { tipo: "fuera_ventana", mesesTranscurridos };
-  }
+  if (!ventanaActual) return { tipo: "fuera_ventana", mesesTranscurridos };
 
   const yaCompletada = ep[ventanaActual.periodo]?.completada;
 
