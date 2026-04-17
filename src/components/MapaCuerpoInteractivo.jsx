@@ -1,33 +1,39 @@
 import React from "react";
 import cuerpoBase from "../assets/cuerpoFrontal.png";
+import { calcularEscalaPendiente } from "../utils/calcularEscalaPendiente";
 
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
 const PUNTOS_ARTICULACIONES = [
-  { id: "cadera-derecha",    x: 155, y: 305, label: "Cadera D" },
-  { id: "cadera-izquierda",  x: 245, y: 305, label: "Cadera I" },
-  { id: "rodilla-derecha",   x: 160, y: 468, label: "Rodilla D" },
-  { id: "rodilla-izquierda", x: 240, y: 468, label: "Rodilla I" },
+  { id: "cadera-derecha",    x: 168, y: 355, label: "Cadera D" },
+  { id: "cadera-izquierda",  x: 232, y: 355, label: "Cadera I" },
+  { id: "rodilla-derecha",   x: 172, y: 478, label: "Rodilla D" },
+  { id: "rodilla-izquierda", x: 228, y: 478, label: "Rodilla I" },
 ];
 
-// Icono prótesis de cadera (SVG path simplificado)
+// Prótesis total de cadera realista
 function IconoCadera({ x, y, color = "#2563eb" }) {
   return (
-    <g transform={`translate(${x - 9}, ${y - 14})`}>
-      <rect x="5"  y="0"  width="8"  height="12" rx="3" fill={color} />
-      <rect x="3"  y="10" width="12" height="4"  rx="2" fill={color} />
-      <rect x="6"  y="13" width="6"  height="10" rx="2" fill={color} />
+    <g transform={`translate(${x}, ${y})`}>
+      <path d="M -8,-10 A 8,8 0 0 1 8,-10 L 6,-8 A 6,6 0 0 0 -6,-8 Z" fill={color} />
+      <circle cx="0" cy="-5" r="4.5" fill={color} />
+      <path d="M -1,-2 L 2,2 L 4,2 L 1,-2 Z" fill={color} />
+      <path d="M 1,2 L 5,2 L 3.5,12 L 2.5,12 Z" fill={color} />
     </g>
   );
 }
 
-// Icono prótesis de rodilla
+// Prótesis total de rodilla realista
 function IconoRodilla({ x, y, color = "#2563eb" }) {
   return (
-    <g transform={`translate(${x - 9}, ${y - 13})`}>
-      <rect x="2"  y="0"  width="14" height="5"  rx="2" fill={color} />
-      <rect x="5"  y="4"  width="8"  height="8"  rx="1" fill={color} opacity="0.8" />
-      <rect x="2"  y="11" width="14" height="5"  rx="2" fill={color} />
+    <g transform={`translate(${x}, ${y})`}>
+      <path
+        d="M -7,-10 Q -8,-4 -5,-2 L 5,-2 Q 8,-4 7,-10 Q 5,-11 3,-10 Q 0,-9 -3,-10 Q -5,-11 -7,-10 Z"
+        fill={color}
+      />
+      <rect x="-6" y="-1.5" width="12" height="1.5" fill={color} opacity="0.5" />
+      <rect x="-7" y="0.5" width="14" height="3" rx="0.5" fill={color} />
+      <path d="M -2,3.5 L 2,3.5 L 1.5,11 L -1.5,11 Z" fill={color} />
     </g>
   );
 }
@@ -42,15 +48,12 @@ function BarraProgreso({ x, y, cirugia }) {
   const barW = 40;
   const barH = 5;
   const barX = x - barW / 2;
-  const barY = y - 34;
+  const barY = y - 32;
 
   return (
     <g>
-      {/* fondo barra */}
       <rect x={barX} y={barY} width={barW} height={barH} rx="2.5" fill="#e2e8f0" />
-      {/* progreso */}
       <rect x={barX} y={barY} width={barW * pct} height={barH} rx="2.5" fill="#16a34a" />
-      {/* texto */}
       <text x={x} y={barY - 3} textAnchor="middle" fontSize="8" fontWeight="700" fill="#16a34a">
         {completados}/{total}
       </text>
@@ -58,59 +61,91 @@ function BarraProgreso({ x, y, cirugia }) {
   );
 }
 
-export default function MapaCuerpoInteractivo({ mapaProtesis, onSelectSegmento, segmentoSeleccionado }) {
+// Badge "!" cuando hay escala pendiente en ventana actual
+function BadgePendiente({ x, y }) {
+  return (
+    <g>
+      <circle cx={x + 12} cy={y - 12} r="7" fill="#dc2626" stroke="#fff" strokeWidth="1.5" />
+      <text x={x + 12} y={y - 9} textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff">
+        !
+      </text>
+    </g>
+  );
+}
+
+export default function MapaCuerpoInteractivo({
+  mapaProtesis,
+  onClickPuntoVacio,
+  onClickProtesis,
+}) {
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: 400, margin: "0 auto" }}>
       <svg viewBox="0 0 400 650" style={{ width: "100%", height: "auto" }}>
         <image href={cuerpoBase} x="0" y="0" width="400" height="650" />
 
         {PUNTOS_ARTICULACIONES.map(punto => {
-          const cirugia      = mapaProtesis[punto.id] || null;
+          const cirugia       = mapaProtesis[punto.id] || null;
           const tieneProtesis = !!cirugia;
-          const esSeleccionado = segmentoSeleccionado === punto.id;
           const esCadera      = punto.id.startsWith("cadera");
 
-          const colorBase    = tieneProtesis ? "#2563eb" : "#94a3b8";
-          const colorActivo  = tieneProtesis ? "#1d4ed8" : "#475569";
-          const colorFinal   = esSeleccionado ? colorActivo : colorBase;
+          // Estado de escalas pendientes
+          const estado = tieneProtesis ? calcularEscalaPendiente(cirugia) : null;
+          const tienePendiente = estado?.tipo === "pendiente";
+
+          const colorBase = tieneProtesis
+            ? (tienePendiente ? "#dc2626" : "#2563eb")
+            : "#94a3b8";
+
+          function handleClick() {
+            if (tieneProtesis) {
+              onClickProtesis(cirugia);
+            } else {
+              onClickPuntoVacio(punto.id);
+            }
+          }
 
           return (
             <g
               key={punto.id}
-              onClick={() => onSelectSegmento(punto.id)}
+              onClick={handleClick}
               style={{ cursor: "pointer" }}
             >
               {/* Área clic grande */}
               <circle cx={punto.x} cy={punto.y} r="28" fill="transparent" />
 
-              {/* Halo selección */}
-              {esSeleccionado && (
-                <circle cx={punto.x} cy={punto.y} r="22" fill="none"
-                  stroke={colorFinal} strokeWidth="2" strokeDasharray="4 3" opacity="0.6" />
-              )}
-
               {tieneProtesis ? (
                 <>
+                  {/* Halo pulsante si hay pendiente */}
+                  {tienePendiente && (
+                    <circle cx={punto.x} cy={punto.y} r="22" fill="none"
+                      stroke={colorBase} strokeWidth="2" strokeDasharray="4 3" opacity="0.5">
+                      <animate attributeName="r" values="22;26;22" dur="2s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.5;0.2;0.5" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+
                   {/* Fondo círculo prótesis */}
-                  <circle cx={punto.x} cy={punto.y} r="16"
-                    fill={esSeleccionado ? "#dbeafe" : "#eff6ff"}
-                    stroke={colorFinal} strokeWidth="1.5" />
+                  <circle cx={punto.x} cy={punto.y} r="17"
+                    fill={tienePendiente ? "#fef2f2" : "#eff6ff"}
+                    stroke={colorBase} strokeWidth="1.5" />
 
                   {/* Icono prótesis */}
                   {esCadera
-                    ? <IconoCadera  x={punto.x} y={punto.y} color={colorFinal} />
-                    : <IconoRodilla x={punto.x} y={punto.y} color={colorFinal} />
+                    ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} />
+                    : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} />
                   }
 
                   {/* Barra progreso escalas */}
                   <BarraProgreso x={punto.x} y={punto.y} cirugia={cirugia} />
+
+                  {/* Badge pendiente */}
+                  {tienePendiente && <BadgePendiente x={punto.x} y={punto.y} />}
                 </>
               ) : (
                 <>
                   {/* Punto vacío — invita a registrar */}
                   <circle cx={punto.x} cy={punto.y} r="12"
-                    fill="#fff" stroke="#cbd5e1" strokeWidth="1.5"
-                    strokeDasharray={esSeleccionado ? "0" : "3 2"} />
+                    fill="#fff" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2" />
                   <text x={punto.x} y={punto.y + 1} textAnchor="middle"
                     dominantBaseline="middle" fontSize="14" fill="#94a3b8">
                     +
@@ -121,11 +156,11 @@ export default function MapaCuerpoInteractivo({ mapaProtesis, onSelectSegmento, 
               {/* Label */}
               <text
                 x={punto.x}
-                y={punto.y + (tieneProtesis ? 26 : 22)}
+                y={punto.y + (tieneProtesis ? 28 : 22)}
                 textAnchor="middle"
                 fontSize="9"
                 fontWeight="700"
-                fill={esSeleccionado ? colorFinal : "#64748b"}
+                fill={tieneProtesis ? colorBase : "#64748b"}
               >
                 {punto.label}
               </text>
@@ -133,6 +168,30 @@ export default function MapaCuerpoInteractivo({ mapaProtesis, onSelectSegmento, 
           );
         })}
       </svg>
+
+      {/* Leyenda */}
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: 16,
+        marginTop: 8,
+        fontSize: 11,
+        color: "#64748b",
+        flexWrap: "wrap",
+      }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#dc2626" }} />
+          Escala pendiente
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#2563eb" }} />
+          Al día
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#fff", border: "1.5px dashed #cbd5e1" }} />
+          Sin prótesis
+        </span>
+      </div>
     </div>
   );
 }
