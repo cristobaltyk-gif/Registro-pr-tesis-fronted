@@ -24,7 +24,14 @@ const ProthesisIcon = () => (
   </svg>
 );
 
-const BARRA_NUEVA = ["lugar", "cirugia", "implante", "fecha"];
+// Orden de la barra de pasos durante el flujo de nueva prótesis
+// LUGAR → CIRUGÍA → IMPLANTE → FECHA
+const BARRA_NUEVA = [
+  { id: "lugar",    label: "Centro"   },
+  { id: "cirugia",  label: "Cirugía"  },
+  { id: "implante", label: "Implante" },
+  { id: "fecha",    label: "Fecha"    },
+];
 
 // Mapea segmento del mapa → valores que el backend espera (Cadera/Rodilla, Derecho/Izquierdo)
 function segmentoALadoBackend(segmentoId) {
@@ -42,7 +49,10 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   function handleSalir() {
-    setToken(null); setDatos({}); setCirugiaId(null); setPaso("inicio");
+    setToken(null);
+    setDatos({});
+    setCirugiaId(null);
+    setPaso("inicio");
   }
 
   function mergeDatos(d) {
@@ -55,7 +65,7 @@ export default function App() {
     setPaso("dashboard");
   }
 
-  // Click en punto VACÍO → arranca flujo de nueva prótesis con preselección
+  // Click en punto VACÍO del mapa → arranca flujo de nueva prótesis con preselección
   function handleClickPuntoVacio(segmentoId) {
     const { articulacion, lado } = segmentoALadoBackend(segmentoId);
     setDatos({ articulacion, lado });
@@ -68,7 +78,10 @@ export default function App() {
     if (estado.tipo === "pendiente") {
       setCirugiaId(cirugia.id);
       setPeriodo(estado.periodo);
-      mergeDatos({ articulacion: cirugia.tipo_protesis, lado: cirugia.lado });
+      mergeDatos({
+        articulacion: cirugia.tipo_protesis,
+        lado:         cirugia.lado,
+      });
       setPaso("escala");
     } else {
       setCirugiaId(cirugia.id);
@@ -76,7 +89,7 @@ export default function App() {
     }
   }
 
-  const pasoIdx = BARRA_NUEVA.indexOf(paso);
+  const pasoIdx = BARRA_NUEVA.findIndex(p => p.id === paso);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
@@ -89,25 +102,53 @@ export default function App() {
           <div style={{ fontSize: 11, color: "#64748b" }}>Instituto de Cirugía Articular · Chile</div>
         </div>
         {token && paso !== "inicio" && (
-          <button className="dp-btn-secondary" style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
-            onClick={handleSalir}>Salir</button>
+          <button
+            className="dp-btn-secondary"
+            style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
+            onClick={handleSalir}
+          >
+            Salir
+          </button>
         )}
       </div>
 
       {/* Barra pasos (solo durante flujo nueva prótesis) */}
       {pasoIdx >= 0 && token && (
-        <div style={{ padding: "10px 16px", background: "#fff", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          padding: "10px 16px",
+          background: "#fff",
+          borderBottom: "1px solid #e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}>
           <button
             onClick={volverDashboard}
-            style={{ background: "transparent", border: "none", color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#64748b",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
           >
             ← Mapa
           </button>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <div style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            overflowX: "auto",
+          }}>
             {BARRA_NUEVA.map((p, i) => (
-              <div key={p} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{
-                  width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 24, height: 24, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 11, fontWeight: 700, flexShrink: 0,
                   background: i <= pasoIdx ? "#0f172a" : "#e2e8f0",
                   color:      i <= pasoIdx ? "#fff"    : "#94a3b8",
@@ -115,7 +156,10 @@ export default function App() {
                   {i < pasoIdx ? "✓" : i + 1}
                 </div>
                 {i < BARRA_NUEVA.length - 1 && (
-                  <div style={{ width: 12, height: 2, flexShrink: 0, background: i < pasoIdx ? "#0f172a" : "#e2e8f0" }} />
+                  <div style={{
+                    width: 12, height: 2, flexShrink: 0,
+                    background: i < pasoIdx ? "#0f172a" : "#e2e8f0",
+                  }} />
                 )}
               </div>
             ))}
@@ -123,31 +167,51 @@ export default function App() {
         </div>
       )}
 
-      {/* INICIO (landing) */}
+      {/* ═══════════════════════════════════════════════════════════
+          INICIO (landing)
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "inicio" && (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+        <div style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "32px 24px",
+        }}>
           <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
               <ProthesisIcon />
             </div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12, lineHeight: 1.2 }}>
+            <h1 style={{
+              fontSize: 26, fontWeight: 800, color: "#0f172a",
+              marginBottom: 12, lineHeight: 1.2,
+            }}>
               Registro Nacional<br />de Prótesis
             </h1>
-            <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 28 }}>
+            <p style={{
+              fontSize: 14, color: "#475569", lineHeight: 1.7, marginBottom: 28,
+            }}>
               Si usted fue operado de una prótesis articular en Chile, ingrese para ver y completar el seguimiento de sus prótesis.
             </p>
-            <button className="dp-btn-primary" style={{ fontSize: 15, padding: "14px 0" }}
-              onClick={() => setPaso("admin")}>
+            <button
+              className="dp-btn-primary"
+              style={{ fontSize: 15, padding: "14px 0" }}
+              onClick={() => setPaso("admin")}
+            >
               Ingresar / Registrarme →
             </button>
-            <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 14, lineHeight: 1.5 }}>
+            <p style={{
+              fontSize: 11, color: "#94a3b8", marginTop: 14, lineHeight: 1.5,
+            }}>
               Su información es confidencial y contribuye al registro nacional de calidad en cirugía articular.
             </p>
           </div>
         </div>
       )}
 
-      {/* ADMIN → tras completar va al DASHBOARD */}
+      {/* ═══════════════════════════════════════════════════════════
+          ADMIN — tras completar va al DASHBOARD
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "admin" && (
         <RegistroAdminForm
           onTokenReady={t => setToken(t)}
@@ -156,7 +220,9 @@ export default function App() {
         />
       )}
 
-      {/* DASHBOARD = MAPA CORPORAL (home post-login) */}
+      {/* ═══════════════════════════════════════════════════════════
+          DASHBOARD = MAPA CORPORAL (home post-login)
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "dashboard" && token && (
         <RegistroDashboard
           key={refreshKey}
@@ -166,7 +232,10 @@ export default function App() {
         />
       )}
 
-      {/* FLUJO NUEVA PRÓTESIS */}
+      {/* ═══════════════════════════════════════════════════════════
+          FLUJO NUEVA PRÓTESIS
+          Orden: LUGAR → CIRUGÍA → IMPLANTE → FECHA
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "lugar" && token && (
         <PasoLugar
           onComplete={d => { mergeDatos(d); setPaso("cirugia"); }}
@@ -196,16 +265,20 @@ export default function App() {
         <PasoFecha
           token={token}
           datos={datos}
-          onComplete={d => {
-            setCirugiaId(d.id);
-            setPeriodo(d.periodo_escala || "preop");
-            setPaso("escala");
+          onComplete={() => {
+            // Prótesis guardada → volver al mapa.
+            // El dashboard calcula automáticamente si hay escala pendiente
+            // según la fecha de cirugía y pinta el punto en rojo si corresponde.
+            volverDashboard();
           }}
           onBack={() => setPaso("implante")}
         />
       )}
 
-      {/* ESCALA → al terminar vuelve al DASHBOARD */}
+      {/* ═══════════════════════════════════════════════════════════
+          ESCALA → se activa solo cuando el paciente toca una prótesis
+          con escala pendiente desde el dashboard
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "escala" && token && cirugiaId && (
         <RegistroEscalaForm
           token={token}
@@ -217,14 +290,23 @@ export default function App() {
         />
       )}
 
-      {/* DETALLE de prótesis al día */}
+      {/* ═══════════════════════════════════════════════════════════
+          DETALLE de prótesis al día (sin escalas pendientes)
+          ═══════════════════════════════════════════════════════════ */}
       {paso === "detalle" && token && cirugiaId && (
-        <div style={{ padding: 24, textAlign: "center", maxWidth: 400, margin: "0 auto" }}>
+        <div style={{
+          padding: 24, textAlign: "center",
+          maxWidth: 400, margin: "0 auto",
+        }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
+          <h2 style={{
+            fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8,
+          }}>
             Esta prótesis está al día
           </h2>
-          <p style={{ fontSize: 14, color: "#475569", marginBottom: 24, lineHeight: 1.5 }}>
+          <p style={{
+            fontSize: 14, color: "#475569", marginBottom: 24, lineHeight: 1.5,
+          }}>
             No tiene evaluaciones pendientes en este momento. Le avisaremos cuando corresponda la siguiente.
           </p>
           <button className="dp-btn-primary" onClick={volverDashboard}>
@@ -239,4 +321,4 @@ export default function App() {
 
     </div>
   );
-}
+      }
