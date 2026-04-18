@@ -4,60 +4,75 @@ import { calcularEscalaPendiente } from "../utils/calcularEscalaPendiente";
 
 const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
-// Coordenadas ajustadas sobre el PNG real (viewBox 400x650):
-// - Caderas a y=380 (línea de pelvis/ingle real)
-// - Rodillas a y=510 (sobre las rótulas reales)
-// - X separado más hacia los flancos para que no queden pegadas al centro
+// ═══════════════════════════════════════════════════════════════
+// COORDENADAS CALIBRADAS sobre cuerpoFrontal.png (1024x1536)
+// ViewBox SVG = 400x650
+// - Caderas (y=336): en la articulación coxofemoral real (ingle)
+// - Rodillas (y=474): centro de rótula
+// - X separado para quedar sobre cada lado del cuerpo
+// ═══════════════════════════════════════════════════════════════
 const PUNTOS_ARTICULACIONES = [
   // Cadera derecha del paciente = izquierda del observador
-  { id: "cadera-derecha",    x: 150, y: 380, label: "Cadera D",  lado: "derecha"   },
+  { id: "cadera-derecha",    x: 170, y: 336, label: "Cadera D",  lado: "derecha"   },
   // Cadera izquierda del paciente = derecha del observador
-  { id: "cadera-izquierda",  x: 250, y: 380, label: "Cadera I",  lado: "izquierda" },
-  { id: "rodilla-derecha",   x: 160, y: 510, label: "Rodilla D", lado: "derecha"   },
-  { id: "rodilla-izquierda", x: 240, y: 510, label: "Rodilla I", lado: "izquierda" },
+  { id: "cadera-izquierda",  x: 240, y: 336, label: "Cadera I",  lado: "izquierda" },
+  { id: "rodilla-derecha",   x: 178, y: 474, label: "Rodilla D", lado: "derecha"   },
+  { id: "rodilla-izquierda", x: 232, y: 474, label: "Rodilla I", lado: "izquierda" },
 ];
 
-// ─────────────────────────────────────────────────────────────
-// ICONO CADERA — construido con orientación "derecha del paciente"
-// El vástago baja y se inclina HACIA LA DERECHA del icono
-// (que, al estar posicionado en la cadera derecha del paciente,
-//  apunta hacia el centro del cuerpo — correcto anatómicamente).
-// Para lado izquierdo se espeja horizontalmente con scale(-1,1).
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// ICONO CADERA — vista anterior (observador mira al paciente de frente)
+//
+// Diseñado para CADERA DERECHA DEL PACIENTE (= izquierda de la imagen):
+//   • Cotilo arriba centrado en el icono (la pelvis)
+//   • Cabeza femoral dentro del cotilo, desplazada lateralmente
+//     (bajo el trocánter mayor — el lateral del cuerpo)
+//   • Cuello femoral OBLICUO: de arriba-lateral a abajo-medial
+//   • Vástago baja por el lado MEDIAL del icono
+//     → al estar en cadera derecha, apunta hacia el centro del cuerpo ✓
+//
+// Para CADERA IZQUIERDA DEL PACIENTE: scale(-1,1) lo espeja → el
+// vástago también queda apuntando al centro del cuerpo ✓
+// ═══════════════════════════════════════════════════════════════
 function IconoCadera({ x, y, color = "#2563eb", lado = "derecha" }) {
-  // Lado derecho del paciente → orientación natural
-  // Lado izquierdo del paciente → espejado
-  const flip = lado === "izquierda" ? -1 : 1;
+  // lado "derecha" del paciente → dibujo natural
+  // lado "izquierda" del paciente → espejado horizontal
+  const flip = lado === "derecha" ? 1 : -1;
 
   return (
     <g transform={`translate(${x}, ${y}) scale(${flip}, 1)`}>
-      {/* Cotilo acetabular (copa) — semicírculo superior */}
+      {/* 1. COTILO ACETABULAR — copa de la pelvis, arriba */}
       <path
-        d="M -9,-8 A 9,9 0 0 1 9,-8 L 7,-6 A 7,7 0 0 0 -7,-6 Z"
+        d="M -9,-9 A 9,9 0 0 1 9,-9 L 7,-7 A 7,7 0 0 0 -7,-7 Z"
         fill={color}
       />
-      {/* Cabeza femoral esférica — dentro del cotilo */}
-      <circle cx="0" cy="-5" r="4" fill={color} />
-      {/* Cuello femoral — sale oblicuo hacia afuera-abajo */}
+
+      {/* 2. CABEZA FEMORAL — esfera desplazada al lado LATERAL (izq del icono)
+             bajo la parte lateral del cotilo (hacia el trocánter mayor) */}
+      <circle cx="-3" cy="-5" r="4" fill={color} />
+
+      {/* 3. CUELLO FEMORAL — oblicuo, de arriba-lateral a abajo-medial
+             Conecta la cabeza con el inicio del vástago */}
       <path
-        d="M -2,-3 L 3,2 L 5,4 L 0,-1 Z"
+        d="M -5,-3 L -2,-1 L 4,4 L 2,6 L -2,2 L -6,-1 Z"
         fill={color}
       />
-      {/* Vástago femoral — baja hacia el centro del cuerpo,
-           ligeramente oblicuo (realismo anatómico) */}
+
+      {/* 4. VÁSTAGO FEMORAL — baja dentro del fémur por el lado MEDIAL
+             (= hacia el centro del cuerpo cuando es cadera derecha) */}
       <path
-        d="M 3,4 L 7,4 L 5,13 L 2,13 Z"
+        d="M 2,5 L 6,5 L 5,14 L 3,14 Z"
         fill={color}
       />
     </g>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // ICONO RODILLA — simétrica por naturaleza
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
-  const flip = lado === "izquierda" ? -1 : 1;
+  const flip = lado === "derecha" ? 1 : -1;
 
   return (
     <g transform={`translate(${x}, ${y}) scale(${flip}, 1)`}>
@@ -66,7 +81,7 @@ function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
         d="M -7,-10 Q -8,-4 -5,-2 L 5,-2 Q 8,-5 7,-10 Q 5,-11 3,-10 Q 0,-9 -3,-10 Q -5,-11 -7,-10 Z"
         fill={color}
       />
-      {/* Inserto de polietileno — línea clara entre componente femoral y tibial */}
+      {/* Inserto de polietileno */}
       <rect x="-6" y="-1.5" width="12" height="1.5" fill={color} opacity="0.45" />
       {/* Bandeja tibial */}
       <rect x="-7" y="0.5" width="14" height="3" rx="0.5" fill={color} />
@@ -76,9 +91,9 @@ function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// UI auxiliares
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// UI AUXILIARES
+// ═══════════════════════════════════════════════════════════════
 function BarraProgreso({ x, y, cirugia }) {
   const ep = cirugia?.escalas_programadas || {};
   const completados = PERIODOS_ORDEN.filter(p => ep[p]?.completada).length;
@@ -108,9 +123,9 @@ function BadgePendiente({ x, y }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
 export default function MapaCuerpoInteractivo({
   mapaProtesis,
   onClickPuntoVacio,
@@ -225,4 +240,4 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-      }
+}
