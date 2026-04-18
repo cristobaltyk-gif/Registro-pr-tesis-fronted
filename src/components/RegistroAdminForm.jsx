@@ -1,17 +1,8 @@
 import { useState } from "react";
 import "../styles/dashboard-pacientes.css";
+import { normalizeRut, isValidRut } from "../utils/rut";
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-function normalizeRut(rut) {
-  rut = rut.trim().toUpperCase().replace(/\./g, "").replace(/ /g, "");
-  if (!rut.includes("-") && rut.length > 1) rut = rut.slice(0, -1) + "-" + rut.slice(-1);
-  return rut;
-}
-
-function isValidRut(rut) {
-  return /^\d{7,8}-[\dK]$/.test(rut);
-}
 
 const ISAPRES = [
   "Banmédica", "Colmena", "Cruz Blanca", "Cruz del Norte",
@@ -44,7 +35,10 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
   async function handleSearch() {
     setError(null);
     const norm = normalizeRut(rutInput);
-    if (!isValidRut(norm)) { setError("RUT inválido"); return; }
+    if (!isValidRut(norm)) {
+      setError("RUT inválido. Verifique su RUT y dígito verificador.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -264,4 +258,4 @@ export default function RegistroAdminForm({ onTokenReady, token: tokenProp, onCo
       </div>
     </div>
   );
-                    }
+                      }
