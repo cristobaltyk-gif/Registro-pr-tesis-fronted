@@ -1,15 +1,23 @@
 import { useState, useEffect } from "react";
 import "../styles/dashboard-pacientes.css";
 
-// Tipos específicos calzan EXACTO con el backend (CirugiaPayload → tipo_protesis)
-const TIPOS_CADERA = [
-  { value: "Cadera total",                           label: "Prótesis total",  descripcion: "Reemplazo completo de la articulación" },
-  { value: "Cadera parcial (hemiartroplastía)",      label: "Prótesis parcial", descripcion: "Reemplazo solo de la cabeza femoral (hemiartroplastía)" },
-];
+// Tipos por articulación — calzan EXACTO con backend CirugiaPayload.tipo_protesis
+const TIPOS_POR_ARTICULACION = {
+  cadera: [
+    { value: "Cadera total",                      label: "Prótesis total",   descripcion: "Reemplazo completo de la articulación" },
+    { value: "Cadera parcial (hemiartroplastía)", label: "Prótesis parcial", descripcion: "Reemplazo solo de la cabeza femoral (hemiartroplastía)" },
+  ],
+  rodilla: [
+    { value: "Rodilla total",             label: "Prótesis total",             descripcion: "Reemplazo completo de la articulación" },
+    { value: "Rodilla unicompartimental", label: "Prótesis unicompartimental", descripcion: "Reemplazo de un solo compartimento de la rodilla" },
+  ],
+};
 
-const TIPOS_RODILLA = [
-  { value: "Rodilla total",                          label: "Prótesis total",             descripcion: "Reemplazo completo de la articulación" },
-  { value: "Rodilla unicompartimental",              label: "Prótesis unicompartimental", descripcion: "Reemplazo solo de un compartimento (media rodilla)" },
+// Compartimentos para unicompartimental de rodilla
+const COMPARTIMENTOS_RODILLA = [
+  { value: "medial",        label: "Compartimento medial",   descripcion: "Lado interno de la rodilla (el más común)" },
+  { value: "lateral",       label: "Compartimento lateral",  descripcion: "Lado externo de la rodilla" },
+  { value: "patelofemoral", label: "Patelofemoral",          descripcion: "Entre la rótula y el fémur" },
 ];
 
 const INDICACIONES = [
@@ -24,34 +32,43 @@ const INDICACIONES = [
 ];
 
 export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
-  // articulacion y lado vienen del click en el mapa
   const articulacion = (inicial.articulacion || "").toLowerCase();
   const lado         = inicial.lado || "";
 
   const esCadera  = articulacion === "cadera";
   const esRodilla = articulacion === "rodilla";
-  const tipos     = esCadera ? TIPOS_CADERA : esRodilla ? TIPOS_RODILLA : [];
+  const tipos     = TIPOS_POR_ARTICULACION[articulacion] || [];
 
-  const [tipoProtesis,   setTipoProtesis]   = useState(inicial.tipo_protesis || "");
-  const [indicacion,     setIndicacion]     = useState(inicial.indicacion    || "");
-  const [otraIndicacion, setOtraIndicacion] = useState("");
-  const [error,          setError]          = useState(null);
+  const [tipoProtesis,    setTipoProtesis]    = useState(inicial.tipo_protesis   || "");
+  const [compartimento,   setCompartimento]   = useState(inicial.compartimento   || "");
+  const [indicacion,      setIndicacion]      = useState(inicial.indicacion      || "");
+  const [otraIndicacion,  setOtraIndicacion]  = useState("");
+  const [error,           setError]           = useState(null);
 
-  // Auto-seleccionar el tipo "total" por defecto (el más común ~90% de casos)
+  // Auto-seleccionar "total" por defecto
   useEffect(() => {
     if (!tipoProtesis && tipos.length > 0) {
       setTipoProtesis(tipos[0].value);
     }
   }, []);
 
-  // Si se abre este paso sin articulación previa → error visible
+  // ¿La selección actual requiere elegir compartimento? (solo uni rodilla)
+  const requiereCompartimento = tipoProtesis === "Rodilla unicompartimental";
+
+  // Si cambia el tipo y ya no es uni, limpiar compartimento
+  useEffect(() => {
+    if (!requiereCompartimento && compartimento) {
+      setCompartimento("");
+    }
+  }, [requiereCompartimento]);
+
   if (!esCadera && !esRodilla) {
     return (
       <div className="dp-root">
         <div className="dp-content">
           <div className="dp-card">
             <div className="registro-error">
-              Error: no se detectó articulación. Vuelva al mapa y toque sobre cadera o rodilla.
+              Error: no se detectó articulación. Vuelva al mapa.
             </div>
             <button className="dp-btn-secondary" style={{ marginTop: 12 }} onClick={onBack}>
               ← Volver al mapa
@@ -68,6 +85,10 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
       setError("Seleccione el tipo de prótesis");
       return;
     }
+    if (requiereCompartimento && !compartimento) {
+      setError("Seleccione qué compartimento se reemplazó");
+      return;
+    }
     if (!indicacion) {
       setError("Seleccione el motivo de la cirugía");
       return;
@@ -79,6 +100,7 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
 
     onComplete?.({
       tipo_protesis: tipoProtesis,
+      compartimento: requiereCompartimento ? compartimento : "",
       indicacion: indicacion === "Otra" ? otraIndicacion.trim() : indicacion,
     });
   }
@@ -98,7 +120,7 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
       <div className="dp-content">
         <div className="dp-card">
 
-          {/* RESUMEN: articulación y lado ya elegidos desde el mapa */}
+          {/* Resumen del mapa */}
           <div style={{
             background: "#eff6ff",
             border: "1px solid #bfdbfe",
@@ -120,13 +142,9 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
             </div>
           </div>
 
-          {error && (
-            <div className="registro-error" style={{ marginBottom: 14 }}>
-              {error}
-            </div>
-          )}
+          {error && <div className="registro-error" style={{ marginBottom: 14 }}>{error}</div>}
 
-          {/* Tipo de prótesis específico */}
+          {/* Tipo de prótesis */}
           <p className="dp-section-title">¿Qué tipo de prótesis se colocó?</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
             {tipos.map(t => {
@@ -161,13 +179,49 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
             })}
           </div>
 
-          {/* Indicación / motivo */}
+          {/* Compartimento — solo si es uni rodilla */}
+          {requiereCompartimento && (
+            <>
+              <p className="dp-section-title">¿Cuál compartimento se reemplazó?</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                {COMPARTIMENTOS_RODILLA.map(c => {
+                  const selected = compartimento === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      onClick={() => setCompartimento(c.value)}
+                      style={{
+                        textAlign: "left",
+                        padding: "12px 14px",
+                        border: `1.5px solid ${selected ? "#0f172a" : "#e2e8f0"}`,
+                        borderRadius: 10,
+                        background: selected ? "#0f172a" : "#fff",
+                        color: selected ? "#fff" : "#0f172a",
+                        fontSize: 14,
+                        cursor: "pointer",
+                        fontFamily: "'DM Sans', system-ui, sans-serif",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>{c.label}</div>
+                        <div style={{ fontSize: 11, opacity: 0.8 }}>{c.descripcion}</div>
+                      </div>
+                      {selected && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Indicación */}
           <p className="dp-section-title">¿Cuál fue el motivo de la cirugía?</p>
           <div className="registro-form" style={{ marginBottom: 10 }}>
-            <select
-              value={indicacion}
-              onChange={e => setIndicacion(e.target.value)}
-            >
+            <select value={indicacion} onChange={e => setIndicacion(e.target.value)}>
               <option value="">Seleccionar…</option>
               {INDICACIONES.map(i => <option key={i} value={i}>{i}</option>)}
             </select>
@@ -192,7 +246,10 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
             >
               ← Volver
             </button>
-            {tipoProtesis && indicacion && (indicacion !== "Otra" || otraIndicacion.trim()) && (
+            {tipoProtesis &&
+             (!requiereCompartimento || compartimento) &&
+             indicacion &&
+             (indicacion !== "Otra" || otraIndicacion.trim()) && (
               <button className="dp-btn-primary" style={{ flex: 1 }} onClick={handleContinuar}>
                 Continuar →
               </button>
@@ -203,4 +260,4 @@ export default function PasoCirugia({ onComplete, onBack, inicial = {} }) {
       </div>
     </div>
   );
-}
+      }
