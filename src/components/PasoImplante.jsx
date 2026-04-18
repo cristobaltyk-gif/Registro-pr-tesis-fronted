@@ -7,77 +7,159 @@ const IMPLANTES = {
     { id: "depuy",   label: "DePuy Synthes",  cotilo: "Pinnacle",  vastago: "Corail"      },
     { id: "zimmer",  label: "Zimmer Biomet",  cotilo: "G7",        vastago: "Taperloc"    },
     { id: "smith",   label: "Smith & Nephew", cotilo: "R3",        vastago: "Anthology"   },
+    { id: "otro",    label: "Otro / No lo sé" },
   ],
   rodilla: [
-    { id: "stryker", label: "Stryker",        modelo: "Triathlon" },
-    { id: "depuy",   label: "DePuy Synthes",  modelo: "Attune"    },
-    { id: "zimmer",  label: "Zimmer Biomet",  modelo: "Persona"   },
-    { id: "smith",   label: "Smith & Nephew", modelo: "Genesis II"},
+    { id: "stryker", label: "Stryker",        modelo: "Triathlon"  },
+    { id: "depuy",   label: "DePuy Synthes",  modelo: "Attune"     },
+    { id: "zimmer",  label: "Zimmer Biomet",  modelo: "Persona"    },
+    { id: "smith",   label: "Smith & Nephew", modelo: "Genesis II" },
+    { id: "otro",    label: "Otro / No lo sé" },
   ],
 };
 
-const ROBOTICA = [
-  { id: "no",   label: "Sin cirugía robótica" },
-  { id: "mako", label: "Mako (Stryker)"       },
-  { id: "rosa", label: "ROSA (Zimmer Biomet)" },
+const ABORDAJES_CADERA = [
+  "Posterior",
+  "Lateral directo",
+  "Anterolateral (Hardinge)",
+  "Anterior directo (DAA)",
+  "SuperPATH",
+  "Otro / No lo sé",
+];
+
+const FIJACIONES_CADERA = [
+  "No cementada",
+  "Cementada",
+  "Híbrida (vástago cementado, cotilo no cementado)",
+  "Híbrida inversa (cotilo cementado, vástago no cementado)",
+  "No lo sé",
+];
+
+// Rodilla total: cementada o no cementada (las híbridas no son tan comunes en rodilla)
+const FIJACIONES_RODILLA = [
+  "Cementada",
+  "No cementada",
+  "Híbrida",
+  "No lo sé",
 ];
 
 const ALINEACIONES = [
-  { id: "mechanical",        label: "Mechanical Alignment"        },
-  { id: "kinematic",         label: "Kinematic Alignment"         },
-  { id: "inverse_kinematic", label: "Inverse Kinematic Alignment" },
-  { id: "restricted",        label: "Restricted Alignment"        },
-  { id: "functional",        label: "Functional Positioning"      },
+  "Mechanical Alignment",
+  "Kinematic Alignment",
+  "Inverse Kinematic Alignment",
+  "Restricted Alignment",
+  "Functional Positioning",
+  "No lo sé",
+];
+
+const ROBOTICA = [
+  "Sin robótica",
+  "Mako (Stryker)",
+  "ROSA (Zimmer Biomet)",
 ];
 
 export default function PasoImplante({ articulacion: artProp, onComplete, onBack, inicial = {} }) {
-  // Leer articulacion desde prop o desde inicial — nunca default a cadera sin datos
-  const articulacion = artProp || inicial.articulacion || "";
-  const esRodilla    = articulacion === "rodilla";
-  const marcas       = IMPLANTES[articulacion] || [];
+  const articulacion   = (artProp || inicial.articulacion || "").toLowerCase();
+  const tipoProtesis   = inicial.tipo_protesis || "";
+  const esCadera       = articulacion === "cadera";
+  const esRodilla      = articulacion === "rodilla";
+  const esParcial      = tipoProtesis === "Cadera parcial (hemiartroplastía)";
+  const esUni          = tipoProtesis === "Rodilla unicompartimental";
+  const esTotal        = tipoProtesis.includes("total") || tipoProtesis.includes("Total");
+  const marcas         = IMPLANTES[articulacion] || [];
 
   const [marca,      setMarca]      = useState(inicial.marca_id   || "");
   const [robotica,   setRobotica]   = useState(inicial.robotica   || "");
+  const [abordaje,   setAbordaje]   = useState(inicial.abordaje   || "");
+  const [fijacion,   setFijacion]   = useState(inicial.fijacion   || "");
   const [alineacion, setAlineacion] = useState(inicial.alineacion || "");
   const [error,      setError]      = useState(null);
 
   const marcaData = marcas.find(m => m.id === marca);
 
+  // ¿Qué preguntas aplican?
+  const pideAbordaje   = esCadera;                    // siempre en cadera
+  const pideFijacion   = (esCadera && !esParcial) || (esRodilla && !esUni);  // solo en totales
+  const pideAlineacion = esRodilla && !esUni;         // solo rodilla total
+  const fijacionesOpciones = esCadera ? FIJACIONES_CADERA : FIJACIONES_RODILLA;
+
   function handleContinuar() {
-    if (!marca)    { setError("Seleccione la marca del implante");     return; }
-    if (!robotica) { setError("Indique si se usó cirugía robótica");   return; }
-    if (esRodilla && !alineacion) { setError("Seleccione el tipo de alineación"); return; }
+    if (!marca)    { setError("Seleccione la marca del implante"); return; }
+    if (pideAbordaje   && !abordaje)   { setError("Seleccione el abordaje quirúrgico"); return; }
+    if (pideFijacion   && !fijacion)   { setError("Seleccione el tipo de fijación");    return; }
+    if (pideAlineacion && !alineacion) { setError("Seleccione el tipo de alineación");  return; }
+    if (!robotica) { setError("Indique si se usó cirugía robótica"); return; }
+
     setError(null);
     onComplete?.({
       marca_id:   marca,
-      marca:      marcaData?.label  || "",
-      cotilo:     marcaData?.cotilo || "",
-      vastago:    marcaData?.vastago|| "",
-      modelo:     marcaData?.modelo || "",
+      marca:      marcaData?.label   || "",
+      cotilo:     esParcial ? "" : (marcaData?.cotilo || ""),
+      vastago:    marcaData?.vastago || "",
+      modelo:     marcaData?.modelo  || "",
+      abordaje:   pideAbordaje   ? abordaje   : "",
+      fijacion:   pideFijacion   ? fijacion   : "",
+      alineacion: pideAlineacion ? alineacion : "",
       robotica,
-      alineacion: esRodilla ? alineacion : "",
     });
   }
 
-  if (!articulacion) {
+  if (!esCadera && !esRodilla) {
     return (
       <div className="dp-root">
         <div className="dp-content">
           <div className="dp-card">
-            <div className="registro-error">Error — vuelva atrás y seleccione cadera o rodilla.</div>
-            <button className="dp-btn-secondary" style={{ marginTop: 12 }} onClick={onBack}>← Volver</button>
+            <div className="registro-error">
+              Error: vuelva atrás y seleccione cadera o rodilla en el mapa.
+            </div>
+            <button className="dp-btn-secondary" style={{ marginTop: 12 }} onClick={onBack}>
+              ← Volver
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
+  function BotonSeleccion({ selected, onClick, label, sub = null }) {
+    return (
+      <button
+        onClick={onClick}
+        style={{
+          textAlign: "left", padding: "11px 16px",
+          border: `1.5px solid ${selected ? "#0f172a" : "#e2e8f0"}`,
+          borderRadius: 10,
+          background: selected ? "#0f172a" : "#fff",
+          color: selected ? "#fff" : "#0f172a",
+          fontSize: 14, fontWeight: selected ? 700 : 400,
+          cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          width: "100%",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div>{label}</div>
+          {sub && <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>{sub}</div>}
+        </div>
+        {selected && <span>✓</span>}
+      </button>
+    );
+  }
+
+  // Helpers para saber si ya se puede habilitar el botón Continuar
+  const listoContinuar =
+    marca &&
+    robotica &&
+    (!pideAbordaje   || abordaje) &&
+    (!pideFijacion   || fijacion) &&
+    (!pideAlineacion || alineacion);
+
   return (
     <div className="dp-root">
       <div className="dp-header">
         <div className="dp-header-left">
           <h1>Datos del implante</h1>
-          <p>{esRodilla ? "Prótesis de rodilla" : "Prótesis de cadera"}</p>
+          <p>{tipoProtesis || (esRodilla ? "Prótesis de rodilla" : "Prótesis de cadera")}</p>
         </div>
       </div>
 
@@ -90,82 +172,111 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
           <p className="dp-section-title">Marca del implante</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {marcas.map(m => (
-              <button key={m.id} onClick={() => setMarca(m.id)} style={{
-                textAlign: "left", padding: "13px 16px",
-                border: `1.5px solid ${marca === m.id ? "#0f172a" : "#e2e8f0"}`,
-                borderRadius: 10,
-                background: marca === m.id ? "#0f172a" : "#fff",
-                color: marca === m.id ? "#fff" : "#0f172a",
-                fontSize: 14, cursor: "pointer",
-                fontFamily: "'DM Sans', system-ui, sans-serif",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-              }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{m.label}</div>
-                  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-                    {esRodilla
-                      ? `Modelo: ${m.modelo}`
-                      : `Cotilo: ${m.cotilo} · Vástago: ${m.vastago}`}
-                  </div>
-                </div>
-                {marca === m.id && <span>✓</span>}
-              </button>
+              <BotonSeleccion
+                key={m.id}
+                selected={marca === m.id}
+                onClick={() => setMarca(m.id)}
+                label={m.label}
+                sub={
+                  m.id === "otro" ? null :
+                  esRodilla ? `Modelo: ${m.modelo}` :
+                  esParcial ? `Vástago: ${m.vastago}` :
+                  `Cotilo: ${m.cotilo} · Vástago: ${m.vastago}`
+                }
+              />
             ))}
           </div>
 
-          {/* Robótica */}
-          {marca && (
+          {/* Abordaje (solo cadera) */}
+          {marca && pideAbordaje && (
             <>
-              <p className="dp-section-title">¿Se usó cirugía robótica?</p>
+              <p className="dp-section-title">Abordaje quirúrgico</p>
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: -6, marginBottom: 10 }}>
+                Cómo llegó el cirujano a la articulación
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                {ROBOTICA.map(r => (
-                  <button key={r.id} onClick={() => setRobotica(r.id)} style={{
-                    textAlign: "left", padding: "11px 16px",
-                    border: `1.5px solid ${robotica === r.id ? "#0f172a" : "#e2e8f0"}`,
-                    borderRadius: 10,
-                    background: robotica === r.id ? "#0f172a" : "#fff",
-                    color: robotica === r.id ? "#fff" : "#0f172a",
-                    fontSize: 14, fontWeight: robotica === r.id ? 700 : 400,
-                    cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
-                    display: "flex", justifyContent: "space-between",
-                  }}>
-                    {r.label}
-                    {robotica === r.id && <span>✓</span>}
-                  </button>
+                {ABORDAJES_CADERA.map(a => (
+                  <BotonSeleccion
+                    key={a}
+                    selected={abordaje === a}
+                    onClick={() => setAbordaje(a)}
+                    label={a}
+                  />
                 ))}
               </div>
             </>
           )}
 
-          {/* Alineación — solo rodilla */}
-          {marca && robotica && esRodilla && (
+          {/* Fijación (solo totales) */}
+          {marca && pideFijacion && (!pideAbordaje || abordaje) && (
+            <>
+              <p className="dp-section-title">Tipo de fijación</p>
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: -6, marginBottom: 10 }}>
+                Cómo se fijó el implante al hueso
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                {fijacionesOpciones.map(f => (
+                  <BotonSeleccion
+                    key={f}
+                    selected={fijacion === f}
+                    onClick={() => setFijacion(f)}
+                    label={f}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Alineación (solo rodilla total) */}
+          {marca && pideAlineacion && fijacion && (
             <>
               <p className="dp-section-title">Tipo de alineación</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
                 {ALINEACIONES.map(a => (
-                  <button key={a.id} onClick={() => setAlineacion(a.id)} style={{
-                    textAlign: "left", padding: "11px 16px",
-                    border: `1.5px solid ${alineacion === a.id ? "#0f172a" : "#e2e8f0"}`,
-                    borderRadius: 10,
-                    background: alineacion === a.id ? "#0f172a" : "#fff",
-                    color: alineacion === a.id ? "#fff" : "#0f172a",
-                    fontSize: 13, fontWeight: alineacion === a.id ? 700 : 400,
-                    cursor: "pointer", fontFamily: "'DM Sans', system-ui, sans-serif",
-                    display: "flex", justifyContent: "space-between",
-                  }}>
-                    {a.label}
-                    {alineacion === a.id && <span>✓</span>}
-                  </button>
+                  <BotonSeleccion
+                    key={a}
+                    selected={alineacion === a}
+                    onClick={() => setAlineacion(a)}
+                    label={a}
+                  />
                 ))}
               </div>
             </>
           )}
 
+          {/* Robótica — al final siempre */}
+          {marca &&
+           (!pideAbordaje   || abordaje) &&
+           (!pideFijacion   || fijacion) &&
+           (!pideAlineacion || alineacion) && (
+            <>
+              <p className="dp-section-title">¿Se usó cirugía robótica?</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                {ROBOTICA.map(r => (
+                  <BotonSeleccion
+                    key={r}
+                    selected={robotica === r}
+                    onClick={() => setRobotica(r)}
+                    label={r}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Botones */}
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button className="dp-btn-secondary" style={{ width: "auto", padding: "11px 20px" }}
-              onClick={onBack}>← Volver</button>
-            {marca && robotica && (!esRodilla || alineacion) && (
-              <button className="dp-btn-primary" onClick={handleContinuar}>Continuar →</button>
+            <button
+              className="dp-btn-secondary"
+              style={{ width: "auto", padding: "11px 20px" }}
+              onClick={onBack}
+            >
+              ← Volver
+            </button>
+            {listoContinuar && (
+              <button className="dp-btn-primary" style={{ flex: 1 }} onClick={handleContinuar}>
+                Continuar →
+              </button>
             )}
           </div>
 
