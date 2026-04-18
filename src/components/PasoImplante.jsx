@@ -35,7 +35,6 @@ const FIJACIONES_CADERA = [
   "No lo sé",
 ];
 
-// Rodilla total: cementada o no cementada (las híbridas no son tan comunes en rodilla)
 const FIJACIONES_RODILLA = [
   "Cementada",
   "No cementada",
@@ -43,6 +42,7 @@ const FIJACIONES_RODILLA = [
   "No lo sé",
 ];
 
+// Alineación — solo aplica a rodilla (total o uni)
 const ALINEACIONES = [
   "Mechanical Alignment",
   "Kinematic Alignment",
@@ -59,36 +59,35 @@ const ROBOTICA = [
 ];
 
 export default function PasoImplante({ articulacion: artProp, onComplete, onBack, inicial = {} }) {
-  const articulacion   = (artProp || inicial.articulacion || "").toLowerCase();
-  const tipoProtesis   = inicial.tipo_protesis || "";
-  const esCadera       = articulacion === "cadera";
-  const esRodilla      = articulacion === "rodilla";
-  const esParcial      = tipoProtesis === "Cadera parcial (hemiartroplastía)";
-  const esUni          = tipoProtesis === "Rodilla unicompartimental";
-  const esTotal        = tipoProtesis.includes("total") || tipoProtesis.includes("Total");
-  const marcas         = IMPLANTES[articulacion] || [];
+  const articulacion  = (artProp || inicial.articulacion || "").toLowerCase();
+  const tipoProtesis  = inicial.tipo_protesis || "";
+  const esCadera      = articulacion === "cadera";
+  const esRodilla     = articulacion === "rodilla";
+  const esParcial     = tipoProtesis === "Cadera parcial (hemiartroplastía)";
+  const esUni         = tipoProtesis === "Rodilla unicompartimental";
+  const marcas        = IMPLANTES[articulacion] || [];
 
   const [marca,      setMarca]      = useState(inicial.marca_id   || "");
-  const [robotica,   setRobotica]   = useState(inicial.robotica   || "");
   const [abordaje,   setAbordaje]   = useState(inicial.abordaje   || "");
   const [fijacion,   setFijacion]   = useState(inicial.fijacion   || "");
   const [alineacion, setAlineacion] = useState(inicial.alineacion || "");
+  const [robotica,   setRobotica]   = useState(inicial.robotica   || "");
   const [error,      setError]      = useState(null);
 
   const marcaData = marcas.find(m => m.id === marca);
 
-  // ¿Qué preguntas aplican?
-  const pideAbordaje   = esCadera;                    // siempre en cadera
-  const pideFijacion   = (esCadera && !esParcial) || (esRodilla && !esUni);  // solo en totales
-  const pideAlineacion = esRodilla && !esUni;         // solo rodilla total
+  // Matriz de preguntas según tipo:
+  const pideAbordaje   = esCadera;                                             // siempre en cadera
+  const pideFijacion   = (esCadera && !esParcial) || (esRodilla && !esUni);    // solo totales
+  const pideAlineacion = esRodilla;                                            // toda rodilla (total o uni)
   const fijacionesOpciones = esCadera ? FIJACIONES_CADERA : FIJACIONES_RODILLA;
 
   function handleContinuar() {
-    if (!marca)    { setError("Seleccione la marca del implante"); return; }
-    if (pideAbordaje   && !abordaje)   { setError("Seleccione el abordaje quirúrgico"); return; }
-    if (pideFijacion   && !fijacion)   { setError("Seleccione el tipo de fijación");    return; }
-    if (pideAlineacion && !alineacion) { setError("Seleccione el tipo de alineación");  return; }
-    if (!robotica) { setError("Indique si se usó cirugía robótica"); return; }
+    if (!marca)                         { setError("Seleccione la marca del implante"); return; }
+    if (pideAbordaje   && !abordaje)    { setError("Seleccione el abordaje quirúrgico"); return; }
+    if (pideFijacion   && !fijacion)    { setError("Seleccione el tipo de fijación");    return; }
+    if (pideAlineacion && !alineacion)  { setError("Seleccione el tipo de alineación");  return; }
+    if (!robotica)                      { setError("Indique si se usó cirugía robótica"); return; }
 
     setError(null);
     onComplete?.({
@@ -146,7 +145,6 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
     );
   }
 
-  // Helpers para saber si ya se puede habilitar el botón Continuar
   const listoContinuar =
     marca &&
     robotica &&
@@ -168,7 +166,7 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
 
           {error && <div className="registro-error" style={{ marginBottom: 14 }}>{error}</div>}
 
-          {/* Marca */}
+          {/* 1. MARCA */}
           <p className="dp-section-title">Marca del implante</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {marcas.map(m => (
@@ -187,7 +185,7 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
             ))}
           </div>
 
-          {/* Abordaje (solo cadera) */}
+          {/* 2. ABORDAJE (solo cadera) */}
           {marca && pideAbordaje && (
             <>
               <p className="dp-section-title">Abordaje quirúrgico</p>
@@ -207,7 +205,7 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
             </>
           )}
 
-          {/* Fijación (solo totales) */}
+          {/* 3. FIJACIÓN (solo totales) */}
           {marca && pideFijacion && (!pideAbordaje || abordaje) && (
             <>
               <p className="dp-section-title">Tipo de fijación</p>
@@ -227,10 +225,15 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
             </>
           )}
 
-          {/* Alineación (solo rodilla total) */}
-          {marca && pideAlineacion && fijacion && (
+          {/* 4. ALINEACIÓN (toda rodilla) — va ANTES de robótica */}
+          {marca && pideAlineacion &&
+           (!pideAbordaje || abordaje) &&
+           (!pideFijacion || fijacion) && (
             <>
               <p className="dp-section-title">Tipo de alineación</p>
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: -6, marginBottom: 10 }}>
+                Estrategia de posicionamiento del implante
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
                 {ALINEACIONES.map(a => (
                   <BotonSeleccion
@@ -244,13 +247,16 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
             </>
           )}
 
-          {/* Robótica — al final siempre */}
+          {/* 5. ROBÓTICA — al final */}
           {marca &&
            (!pideAbordaje   || abordaje) &&
            (!pideFijacion   || fijacion) &&
            (!pideAlineacion || alineacion) && (
             <>
               <p className="dp-section-title">¿Se usó cirugía robótica?</p>
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: -6, marginBottom: 10 }}>
+                Herramienta usada para ejecutar la cirugía
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
                 {ROBOTICA.map(r => (
                   <BotonSeleccion
@@ -284,4 +290,4 @@ export default function PasoImplante({ articulacion: artProp, onComplete, onBack
       </div>
     </div>
   );
-      }
+              }
