@@ -67,6 +67,7 @@ export default function MapaCuerpoInteractivo({
 
           return (
             <g key={punto.id} onClick={handleClick} style={{ cursor: "pointer" }}>
+              {/* Área clic invisible */}
               <circle cx={punto.x} cy={punto.y} r="28" fill="transparent" />
 
               {tieneProtesis ? (
@@ -78,9 +79,7 @@ export default function MapaCuerpoInteractivo({
                       <animate attributeName="opacity" values="0.5;0.2;0.5" dur="2s" repeatCount="indefinite" />
                     </circle>
                   )}
-                  <circle cx={punto.x} cy={punto.y} r="22"
-                    fill={tienePendiente ? "#fef2f2" : "#eff6ff"}
-                    stroke={colorBase} strokeWidth="1.5" />
+                  {/* Icono completo — sin círculo de fondo, sin borde */}
                   {esCadera
                     ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
                     : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
@@ -126,4 +125,4 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-}
+      }
