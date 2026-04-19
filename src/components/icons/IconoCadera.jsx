@@ -9,7 +9,7 @@ export default function IconoCadera({ x, y, color = "#2563eb", lado = "derecha" 
       {/* Cuello MUY corto */}
       <path d="M -3,-6 L 0,-3 L 2,-1 L 0,1 L -3,-1 L -5,-3 Z" fill={color} />
       {/* Vástago */}
-      <rect x="1" y="0" width="5" height="13" rx="2" fill={color} />
+      <rect x="1" y="0" width="5" height="18" rx="2" fill={color} />
     </g>
   );
 }
