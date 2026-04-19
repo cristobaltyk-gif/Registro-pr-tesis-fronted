@@ -21,10 +21,10 @@ export default function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha"
       <rect x="-9" y="-4" width="18" height="3" rx="1" fill={color} fillOpacity="0.5" />
 
       {/* Bandeja tibial */}
-      <rect x="-10" y="-1" width="20" height="5" rx="1.5" fill={color} />
+      <rect x="-10" y="-1" width="20" height="4" rx="1.5" fill={color} />
 
       {/* Vástago tibial — baja centrado */}
-      <rect x="-3" y="4" width="4" height="13" rx="1.5" fill={color} />
+      <rect x="-3" y="4" width="3" height="0" rx="1.5" fill={color} />
 
     </g>
   );
