@@ -6,70 +6,57 @@ const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 
 // ═══════════════════════════════════════════════════════════════
 // COORDENADAS CALIBRADAS sobre cuerpoFrontal.png (1024x1536)
+// Medidas con PIL directamente sobre el PNG real.
 // ViewBox SVG = 400x650
-// - Caderas (y=336): en la articulación coxofemoral real (ingle)
-// - Rodillas (y=474): centro de rótula
-// - X separado para quedar sobre cada lado del cuerpo
 // ═══════════════════════════════════════════════════════════════
 const PUNTOS_ARTICULACIONES = [
   // Cadera derecha del paciente = izquierda del observador
-  { id: "cadera-derecha",    x: 170, y: 336, label: "Cadera D",  lado: "derecha"   },
+  { id: "cadera-derecha",    x: 167, y: 355, label: "Cadera D",  lado: "derecha"   },
   // Cadera izquierda del paciente = derecha del observador
-  { id: "cadera-izquierda",  x: 240, y: 336, label: "Cadera I",  lado: "izquierda" },
-  { id: "rodilla-derecha",   x: 178, y: 474, label: "Rodilla D", lado: "derecha"   },
-  { id: "rodilla-izquierda", x: 232, y: 474, label: "Rodilla I", lado: "izquierda" },
+  { id: "cadera-izquierda",  x: 233, y: 355, label: "Cadera I",  lado: "izquierda" },
+  { id: "rodilla-derecha",   x: 173, y: 477, label: "Rodilla D", lado: "derecha"   },
+  { id: "rodilla-izquierda", x: 227, y: 477, label: "Rodilla I", lado: "izquierda" },
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// ICONO CADERA — vista anterior (observador mira al paciente de frente)
+// ICONO CADERA — vista anterior
 //
-// Diseñado para CADERA DERECHA DEL PACIENTE (= izquierda de la imagen):
-//   • Cotilo arriba centrado en el icono (la pelvis)
-//   • Cabeza femoral dentro del cotilo, desplazada lateralmente
-//     (bajo el trocánter mayor — el lateral del cuerpo)
-//   • Cuello femoral OBLICUO: de arriba-lateral a abajo-medial
-//   • Vástago baja por el lado MEDIAL del icono
-//     → al estar en cadera derecha, apunta hacia el centro del cuerpo ✓
+// CADERA DERECHA DEL PACIENTE (izquierda de la imagen):
+//   • Cotilo (copa) arriba
+//   • Cabeza femoral sale hacia la IZQUIERDA del icono (lateral, trocánter)
+//   • Cuello oblicuo: de abajo-derecha sube a arriba-izquierda
+//   • Vástago en la DERECHA del icono → apunta al centro del cuerpo ✓
 //
-// Para CADERA IZQUIERDA DEL PACIENTE: scale(-1,1) lo espeja → el
-// vástago también queda apuntando al centro del cuerpo ✓
+// CADERA IZQUIERDA: scale(-1,1) espeja todo →
+//   • Cabeza sale hacia la DERECHA (lateral)
+//   • Vástago queda a la IZQUIERDA → también apunta al centro ✓
 // ═══════════════════════════════════════════════════════════════
 function IconoCadera({ x, y, color = "#2563eb", lado = "derecha" }) {
-  // lado "derecha" del paciente → dibujo natural
-  // lado "izquierda" del paciente → espejado horizontal
+  // Cadera derecha del paciente → orientación natural del dibujo
+  // Cadera izquierda del paciente → espejado
   const flip = lado === "derecha" ? 1 : -1;
 
   return (
     <g transform={`translate(${x}, ${y}) scale(${flip}, 1)`}>
-      {/* 1. COTILO ACETABULAR — copa de la pelvis, arriba */}
-      <path
-        d="M -9,-9 A 9,9 0 0 1 9,-9 L 7,-7 A 7,7 0 0 0 -7,-7 Z"
-        fill={color}
-      />
+      {/* 1. COTILO — copa pélvica, arriba y centrada */}
+      <path d="M -8,-10 A 8,8 0 0 1 8,-10 L 6,-8 A 6,6 0 0 0 -6,-8 Z" fill={color} />
 
-      {/* 2. CABEZA FEMORAL — esfera desplazada al lado LATERAL (izq del icono)
-             bajo la parte lateral del cotilo (hacia el trocánter mayor) */}
-      <circle cx="-3" cy="-5" r="4" fill={color} />
+      {/* 2. CABEZA FEMORAL — desplazada a la izquierda (lateral = trocánter mayor) */}
+      <circle cx="-4" cy="-5" r="4" fill={color} />
 
-      {/* 3. CUELLO FEMORAL — oblicuo, de arriba-lateral a abajo-medial
-             Conecta la cabeza con el inicio del vástago */}
-      <path
-        d="M -5,-3 L -2,-1 L 4,4 L 2,6 L -2,2 L -6,-1 Z"
-        fill={color}
-      />
+      {/* 3. CUELLO FEMORAL — oblicuo de izq-arriba hacia der-abajo
+           (de la cabeza lateral hacia el canal femoral medial) */}
+      <path d="M -2,-2 L 0,0 L 5,5 L 3,7 L -1,2 L -3,0 Z" fill={color} />
 
-      {/* 4. VÁSTAGO FEMORAL — baja dentro del fémur por el lado MEDIAL
-             (= hacia el centro del cuerpo cuando es cadera derecha) */}
-      <path
-        d="M 2,5 L 6,5 L 5,14 L 3,14 Z"
-        fill={color}
-      />
+      {/* 4. VÁSTAGO FEMORAL — en la parte DERECHA del icono
+           (= lado medial = hacia el centro del cuerpo en cadera derecha) */}
+      <path d="M 3,6 L 7,6 L 6,14 L 4,14 Z" fill={color} />
     </g>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ICONO RODILLA — simétrica por naturaleza
+// ICONO RODILLA
 // ═══════════════════════════════════════════════════════════════
 function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
   const flip = lado === "derecha" ? 1 : -1;
@@ -85,7 +72,7 @@ function IconoRodilla({ x, y, color = "#2563eb", lado = "derecha" }) {
       <rect x="-6" y="-1.5" width="12" height="1.5" fill={color} opacity="0.45" />
       {/* Bandeja tibial */}
       <rect x="-7" y="0.5" width="14" height="3" rx="0.5" fill={color} />
-      {/* Vástago tibial corto */}
+      {/* Vástago tibial */}
       <path d="M -2,3.5 L 2,3.5 L 1.5,11 L -1.5,11 Z" fill={color} />
     </g>
   );
@@ -141,7 +128,7 @@ export default function MapaCuerpoInteractivo({
           const tieneProtesis = !!cirugia;
           const esCadera      = punto.id.startsWith("cadera");
 
-          const estado = tieneProtesis ? calcularEscalaPendiente(cirugia) : null;
+          const estado         = tieneProtesis ? calcularEscalaPendiente(cirugia) : null;
           const tienePendiente = estado?.tipo === "pendiente";
 
           const colorBase = tieneProtesis
@@ -155,12 +142,12 @@ export default function MapaCuerpoInteractivo({
 
           return (
             <g key={punto.id} onClick={handleClick} style={{ cursor: "pointer" }}>
-              {/* Área clic invisible más grande */}
+              {/* Área clic invisible */}
               <circle cx={punto.x} cy={punto.y} r="28" fill="transparent" />
 
               {tieneProtesis ? (
                 <>
-                  {/* Halo pulsante si hay pendiente */}
+                  {/* Halo pulsante si hay escala pendiente */}
                   {tienePendiente && (
                     <circle
                       cx={punto.x} cy={punto.y} r="22" fill="none"
@@ -171,14 +158,14 @@ export default function MapaCuerpoInteractivo({
                     </circle>
                   )}
 
-                  {/* Fondo circular del icono */}
+                  {/* Fondo circular */}
                   <circle
                     cx={punto.x} cy={punto.y} r="17"
                     fill={tienePendiente ? "#fef2f2" : "#eff6ff"}
                     stroke={colorBase} strokeWidth="1.5"
                   />
 
-                  {/* Icono específico */}
+                  {/* Icono de prótesis */}
                   {esCadera
                     ? <IconoCadera  x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
                     : <IconoRodilla x={punto.x} y={punto.y} color={colorBase} lado={punto.lado} />
@@ -189,7 +176,7 @@ export default function MapaCuerpoInteractivo({
                 </>
               ) : (
                 <>
-                  {/* Punto vacío con + */}
+                  {/* Punto vacío */}
                   <circle
                     cx={punto.x} cy={punto.y} r="12"
                     fill="#fff" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2"
@@ -198,13 +185,11 @@ export default function MapaCuerpoInteractivo({
                     x={punto.x} y={punto.y + 1}
                     textAnchor="middle" dominantBaseline="middle"
                     fontSize="14" fill="#94a3b8"
-                  >
-                    +
-                  </text>
+                  >+</text>
                 </>
               )}
 
-              {/* Label abajo */}
+              {/* Label */}
               <text
                 x={punto.x}
                 y={punto.y + (tieneProtesis ? 28 : 22)}
@@ -240,4 +225,5 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-}
+      }
+                
