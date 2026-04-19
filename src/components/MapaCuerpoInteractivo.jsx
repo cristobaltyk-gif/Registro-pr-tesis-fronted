@@ -11,11 +11,11 @@ const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 // ═══════════════════════════════════════════════════════════════
 const PUNTOS_ARTICULACIONES = [
   // Cadera derecha del paciente = izquierda del observador
-  { id: "cadera-derecha",    x: 170, y: 315, label: "Cadera D",  lado: "derecha"   },
+  { id: "cadera-derecha",    x: 170, y: 316, label: "Cadera D",  lado: "derecha"   },
   // Cadera izquierda del paciente = derecha del observador
-  { id: "cadera-izquierda",  x: 230, y: 315, label: "Cadera I",  lado: "izquierda" },
-  { id: "rodilla-derecha",   x: 168, y: 435, label: "Rodilla D", lado: "derecha"   },
-  { id: "rodilla-izquierda", x: 232, y: 435, label: "Rodilla I", lado: "izquierda" },
+  { id: "cadera-izquierda",  x: 230, y: 316, label: "Cadera I",  lado: "izquierda" },
+  { id: "rodilla-derecha",   x: 168, y: 432, label: "Rodilla D", lado: "derecha"   },
+  { id: "rodilla-izquierda", x: 232, y: 432, label: "Rodilla I", lado: "izquierda" },
 ];
 
 // ═══════════════════════════════════════════════════════════════
