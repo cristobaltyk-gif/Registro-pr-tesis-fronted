@@ -223,4 +223,4 @@ export default function MapaCuerpoInteractivo({
       </div>
     </div>
   );
-          }
+                    }
