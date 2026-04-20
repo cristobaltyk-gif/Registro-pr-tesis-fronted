@@ -9,8 +9,8 @@ const PERIODOS_ORDEN = ["preop", "3m", "6m", "1a", "2a"];
 const PUNTOS_ARTICULACIONES = [
   { id: "cadera-derecha",    x: 170, y: 316, label: "Cadera D",  lado: "derecha"   },
   { id: "cadera-izquierda",  x: 230, y: 316, label: "Cadera I",  lado: "izquierda" },
-  { id: "rodilla-derecha",   x: 168, y: 432, label: "Rodilla D", lado: "derecha"   },
-  { id: "rodilla-izquierda", x: 232, y: 432, label: "Rodilla I", lado: "izquierda" },
+  { id: "rodilla-derecha",   x: 168, y: 435, label: "Rodilla D", lado: "derecha"   },
+  { id: "rodilla-izquierda", x: 232, y: 435, label: "Rodilla I", lado: "izquierda" },
 ];
 
 function BarraProgreso({ x, y, cirugia }) {
